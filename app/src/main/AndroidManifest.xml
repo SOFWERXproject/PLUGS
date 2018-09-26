@@ -16,6 +16,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <service
+            android:name=".Queue.Queue"
+            android:enabled="true"
+            android:exported="false"
+            android:icon="@mipmap/ic_launcher"
+            android:label="Queue" />
     </application>
+
 
 </manifest>
