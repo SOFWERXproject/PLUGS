@@ -17,13 +17,19 @@
             </intent-filter>
         </activity>
         <activity android:name=".ConfigurationActivity" />
-        <activity android:name=".DeployActivity"></activity>
+        <activity android:name=".DeployActivity" />
+
         <service
             android:name=".Queue.Queue"
             android:enabled="true"
             android:exported="false"
             android:icon="@mipmap/ic_launcher"
             android:label="Queue" />
+
+        <activity android:name=".TriggersActivity" />
+        <activity android:name=".ActionsActivity" />
+        <activity android:name=".HomeStationActivity" />
+        <activity android:name=".GeneralActivity"></activity>
     </application>
 
 </manifest>
