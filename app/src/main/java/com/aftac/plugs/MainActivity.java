@@ -39,13 +39,13 @@ public class MainActivity extends AppCompatActivity implements Queue.onStartedLi
     }
 
     public void gotoConfigure(View view) {
-        // Go to configuration screen
+        // onClick action for Configure button in home screen
         Intent intent = new Intent(this, ConfigurationActivity.class);
         startActivity(intent);
     }
 
     public void gotoDeploy(View view) {
-        // Deploy phone
+        // onClick action for Deploy button in home screen
         Intent intent = new Intent(this, DeployActivity.class);
         startActivity(intent);
     }
