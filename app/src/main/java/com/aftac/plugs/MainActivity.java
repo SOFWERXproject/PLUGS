@@ -8,6 +8,7 @@ import android.util.Log;
 
 import com.aftac.plugs.Queue.Queue;
 import com.aftac.plugs.Sensors.PlugsSensors;
+import android.view.View;
 
 import java.util.List;
 
@@ -54,5 +55,17 @@ public class MainActivity extends AppCompatActivity implements Queue.onStartedLi
         //   Log.v("PLUGS", "Number of sensors: " + sensorList.size());
         //});
         Queue.push(command);
+    }
+
+    public void gotoConfigure(View view) {
+        // Go to configuration screen
+        Intent intent = new Intent(this, ConfigurationActivity.class);
+        startActivity(intent);
+    }
+
+    public void gotoDeploy(View view) {
+        // Deploy phone
+        Intent intent = new Intent(this, DeployActivity.class);
+        startActivity(intent);
     }
 }
