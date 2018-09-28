@@ -38,25 +38,6 @@ public class MainActivity extends AppCompatActivity implements Queue.onStartedLi
         Queue.push(command);
     }
 
-    @Override
-    public void onQueueStarted() {
-        // An example of a command sent to the Queue, and receiving a response
-        Queue.Command command = new Queue.Command(
-                Queue.COMMAND_TARGET_NONE,          // The target device in the mesh network
-                Queue.COMMAND_CLASS_SENSORS,        // "class" of the command
-                PlugsSensors.COMMAND_GET_SENSORS,   // The command id
-                new Object[] {
-                        // Arguments
-                    Sensor.TYPE_ALL,
-                    "This is a test message"
-                });
-
-        //command.setResponseListener((List<Sensor> sensorList) -> {
-        //   Log.v("PLUGS", "Number of sensors: " + sensorList.size());
-        //});
-        Queue.push(command);
-    }
-
     public void gotoConfigure(View view) {
         // Go to configuration screen
         Intent intent = new Intent(this, ConfigurationActivity.class);
@@ -67,5 +48,24 @@ public class MainActivity extends AppCompatActivity implements Queue.onStartedLi
         // Deploy phone
         Intent intent = new Intent(this, DeployActivity.class);
         startActivity(intent);
+    }
+
+    @Override
+    public void onQueueStarted() {
+        // An example of a command sent to the Queue, and receiving a response
+        Queue.Command command = new Queue.Command(
+                Queue.COMMAND_TARGET_NONE,          // The target device in the mesh network
+                Queue.COMMAND_CLASS_SENSORS,        // "class" of the command
+                PlugsSensors.COMMAND_GET_SENSORS,   // The command id
+                new Object[] {
+                        // Arguments
+                        Sensor.TYPE_ALL,
+                        "This is a test message"
+                });
+
+        //command.setResponseListener((List<Sensor> sensorList) -> {
+        //   Log.v("PLUGS", "Number of sensors: " + sensorList.size());
+        //});
+        Queue.push(command);
     }
 }
