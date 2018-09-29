@@ -6,4 +6,125 @@
     android:layout_height="match_parent"
     tools:context=".TriggersActivity">
 
+    <ImageView
+        android:id="@+id/imageViewBG"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:contentDescription="TODO"
+        android:scaleType="centerCrop"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.0"
+        app:srcCompat="@drawable/lumia" />
+
+    <TextView
+        android:id="@+id/textLabelTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginLeft="16dp"
+        android:layout_marginTop="50dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginRight="16dp"
+        android:text="triggers"
+        android:textAllCaps="true"
+        android:textColor="@color/colorPrimaryDark"
+        android:textSize="36sp"
+        android:textStyle="bold"
+        android:visibility="visible"
+        app:fontFamily="serif"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.498"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:background="@color/colorPrimary" />
+
+    <CheckBox
+        android:id="@+id/checkBoxAccelerometer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="24dp"
+        android:layout_marginLeft="24dp"
+        android:layout_marginTop="24dp"
+        android:text="Accelerometer"
+        android:textAllCaps="false"
+        android:textSize="24sp"
+        android:onClick="onCheckboxClicked"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/textLabelTitle" />
+
+    <SeekBar
+        android:id="@+id/seekBarAccelerometer"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginRight="16dp"
+        android:visibility="gone"
+        app:layout_constraintEnd_toStartOf="@+id/editTextAccelerometer"
+        app:layout_constraintStart_toStartOf="@+id/checkBoxAccelerometer"
+        app:layout_constraintTop_toBottomOf="@+id/checkBoxAccelerometer" />
+
+    <CheckBox
+        android:id="@+id/checkBoxMicrophone"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        android:onClick="onCheckboxClicked"
+        android:text="Microphone"
+        android:textAllCaps="false"
+        android:textSize="24sp"
+        android:visibility="visible"
+        app:layout_constraintStart_toStartOf="@+id/checkBoxAccelerometer"
+        app:layout_constraintTop_toBottomOf="@+id/seekBarAccelerometer" />
+
+    <SeekBar
+        android:id="@+id/seekBarMicrophone"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginRight="16dp"
+        android:visibility="gone"
+        app:layout_constraintEnd_toStartOf="@+id/editTextMicrophone"
+        app:layout_constraintStart_toStartOf="@+id/checkBoxMicrophone"
+        app:layout_constraintTop_toBottomOf="@+id/checkBoxMicrophone" />
+
+    <TextView
+        android:id="@+id/editTextAccelerometer"
+        android:layout_width="40dp"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="24dp"
+        android:layout_marginRight="24dp"
+        android:ems="10"
+        android:inputType="number"
+        android:maxLength="3"
+        android:singleLine="true"
+        android:text="0"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@+id/seekBarAccelerometer"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <TextView
+        android:id="@+id/editTextMicrophone"
+        android:layout_width="40dp"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="24dp"
+        android:layout_marginRight="24dp"
+        android:ems="10"
+        android:inputType="number"
+        android:maxLength="3"
+        android:singleLine="true"
+        android:text="0"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@+id/seekBarMicrophone"
+        app:layout_constraintEnd_toEndOf="parent" />
+
 </android.support.constraint.ConstraintLayout>
