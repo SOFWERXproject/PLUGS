@@ -7,16 +7,21 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
 import android.util.SparseArray;
 
-import com.aftac.plugs.MainActivity;
 import com.aftac.plugs.Sensors.PlugsSensors;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.io.Serializable;
+import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -25,7 +30,8 @@ public class Queue extends Service {
     private static final String LOG_TAG = "PLUGS.Queue";
 
     public static final int COMMAND_TARGET_NONE = 0x00000000;
-    public static final int COMMAND_TARGET_ALL = 0xFFFFFFFF;
+    public static final int COMMAND_TARGET_SELF = 0xFFFFFFFE;
+    public static final int COMMAND_TARGET_ALL =  0xFFFFFFFF;
 
     public final static int COMMAND_CLASS_MISC = 0;
     public final static int COMMAND_CLASS_SENSORS = 1;
@@ -66,18 +72,28 @@ public class Queue extends Service {
         int commandClass = -1;
         int targetId = COMMAND_TARGET_NONE;
         int commandId = -1;
-        Object[] args;
-        Runnable responseListener = null;
+        JSONArray args;
+        CommandResponseListener responseListener = null;
+        Handler  responseHandler = workHandler;
 
-        public Command(int targetId, int commandClass, int commandId, Object[] args) {
+        public Command(int targetId, int commandClass, int commandId, JSONArray args) {
             this.commandClass = commandClass;
-            this.targetId = targetId;
+            this.targetId  = targetId;
             this.commandId = commandId;
             this.args = args;
         }
 
-        //public void setResponseListener(
-        //};
+        // A handler can be set for the responseListener, or just make one for the calling thread
+        public void setResponseListener(CommandResponseListener listener, Handler handler) {
+            responseListener = listener;
+            responseHandler  = handler;
+        }
+        public void setResponseListener(CommandResponseListener listener) {
+            setResponseListener(listener, new Handler(Looper.myLooper()));
+        }
+    }
+    public interface CommandResponseListener {
+        void onCommandResponse(Object response, Command cmd);
     }
 
     public static abstract class Trigger extends QueueItem {
@@ -89,31 +105,17 @@ public class Queue extends Service {
     public interface onStartedListener { void onQueueStarted(); }
     public static void setStartedListener(onStartedListener obj) { startListener = obj; }
 
-    @Override
-    public void onCreate() {
-        super.onCreate();
-    }
 
     // No need to bind to the queue service
-    @Override
-    public IBinder onBind(Intent intent) {
-        return null;
-    }
-
+    @Override public IBinder onBind(Intent intent) { return null; }
 
 
     // Returns true if the queue service is running
-    public static boolean isRunning() {
-        return running;
-    }
+    public static boolean isRunning() { return running; }
 
     // Push items to the queue for processing
     // Generic push method so network classes don't need to know the message type
     public static void push(QueueItem item) {
-        push(item, item.getType());
-    }
-
-    private static void push(QueueItem item, int type) {
         Bundle bundle = new Bundle();
         bundle.putSerializable("content", item);
         Message msg = new Message();
@@ -125,29 +127,34 @@ public class Queue extends Service {
         Log.v(LOG_TAG, "An item was pushed onto the queue.");
     }
 
-    //
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         super.onStartCommand(intent, flags, startId);
-        if (!running) {
-            Log.v(LOG_TAG, "Queue service started.");
-            running = true;
-            me = this;
-
-            // Get a handler for the main thread
-            mainHandler = new Handler(getMainLooper());
-
-            // Create a work thread and handler for the Queue service
-            workThread = new HandlerThread(getClass().getName(), Thread.MAX_PRIORITY);
-            workThread.start();
-            workHandler = new Handler(workThread.getLooper(), workCallback);
-
-            // TODO: startForeground(id, notification);
-
-            // Do the rest of the initialization in the work thread
-            workHandler.post(() -> init());
-        } else
+        if (running) {
+            // Service is already running
             Log.v(LOG_TAG, "Queue service poked.");
+            if (startListener != null) startListener.onQueueStarted();
+            readIntent(intent);
+            return START_STICKY;
+        }
+
+        Log.v(LOG_TAG, "Queue service started.");
+        running = true;
+        me = this;
+
+        // Get a handler for the main thread
+        mainHandler = new Handler(getMainLooper());
+
+        // Create a work thread and handler for the Queue service
+        workThread = new HandlerThread(getClass().getName(), Thread.MAX_PRIORITY);
+        workThread.start();
+        workHandler = new Handler(workThread.getLooper(), workCallback);
+
+        // TODO: startForeground(id, notification);
+
+        // Do the rest of the initialization in the work thread
+        workHandler.post(this::init);
+
         readIntent(intent);
         return START_STICKY;
     }
@@ -164,7 +171,7 @@ public class Queue extends Service {
             miscCommands = getQueueCommands(this.getClass());
             sensorCommands = getQueueCommands(PlugsSensors.class);
 
-            mainHandler.post(() -> { if (startListener != null) startListener.onQueueStarted(); });
+            if (startListener != null) mainHandler.post(() -> startListener.onQueueStarted());
         });
     }
 
@@ -185,14 +192,23 @@ public class Queue extends Service {
         @Override
         public boolean handleMessage(Message msg) {
             Bundle bundle = msg.getData();
+            if (!bundle.containsKey("content")) return false;
+
             QueueItem content = (QueueItem) bundle.getSerializable("content");
             Log.v(LOG_TAG, "Queue is processing an item (" + content.getType() + ")");
+
             switch (content.getType()) {
                 case ITEM_TYPE_COMMAND:
-                    Log.v(LOG_TAG, "Queue is processing a command");
-                    try { processCommand((Command) content); }
-                    catch (Exception e) { Log.e(LOG_TAG , "Exception", e); }
+                    int target = ((Command)content).targetId;
+                    if (target == myId || target == COMMAND_TARGET_SELF
+                            || target == COMMAND_TARGET_ALL) {
+                        Log.v(LOG_TAG, "Queue is processing a command");
+                        try { processCommand((Command) content); }
+                        catch (Exception e) { Log.e(LOG_TAG, "Exception", e); }
+                    } else
+                        Log.v(LOG_TAG, "Queue ignored a command not targeted at this device");
                     break;
+
                 case ITEM_TYPE_TRIGGER:
                     processTrigger((Trigger) content);
                     break;
@@ -209,10 +225,11 @@ public class Queue extends Service {
         //}
 
         //if command exists for trigger {
-        //    processCommand(command);
+        //    processCommand(triggerCommand);
         //}
     }
 
+    // Processes commands sent to the Queue
     private void processCommand(Command command)
             throws InvocationTargetException, IllegalAccessException {
         SparseArray<Method> list;
@@ -228,21 +245,32 @@ public class Queue extends Service {
                 return;
         }
 
-        Method method = list.get(command.commandId);
-        Object[] args = command.args;
-        if (args == null) args = new Object[0];
+        // Turn the argument JSONArray into an Object Array so the arguments get passed properly
+        JSONArray jsonArgs = command.args;
+        Object[] args = null;
+        if (jsonArgs != null){
+            int len = jsonArgs.length();
+            args = new Object[len];
+            for (int i = 0; i < len; i++) {
+                args[i] = jsonArgs.opt(i);
+            }
+        }
 
+        // Execute the command
+        Method method = list.get(command.commandId);
         Object returnVal = method.invoke(null, args);
 
-        // TODO: handle returned values properly
-        method.getReturnType().cast(returnVal);
-        //if (command.responseListener != null)
-        //    command.responseListener.start();
+        // Return the response to the listener
+        if (command.responseListener != null) {
+            command.responseHandler.post(() ->
+                    command.responseListener.onCommandResponse(returnVal, command));
+        }
         Log.v(LOG_TAG, "Successfully invoked method \"" + method.getName() + "\"");
     }
 
     // Quit the work thread and stop the queue service
     private void stopAndQuit() {
+        running = false;
         stopForeground(true);
         workHandler.removeMessages(1);
 
@@ -254,46 +282,55 @@ public class Queue extends Service {
         mainHandler = null;
         workHandler = null;
         workThread = null;
-        this.stopSelf();
+        stopSelf();
+        me = null;
+        Log.v(LOG_TAG, "Queue service has stopped");
     }
 
-    // Annotation to mark queue commands
+    // Custom annotation to mark queue commands
     @Retention(RetentionPolicy.RUNTIME)
+    @Target(ElementType.METHOD)
     public @interface addCommand {
-        int id();
+        int value();
     }
 
-
-    // This Queue.command annotation for creating queue commands is just an experiment
-    // I'm not sure that it will really work out
-    @Queue.addCommand(id=COMMAND_MISC_STOP)
-    static void stopCommand(Object[] args) {
+    // Queue command to stop the Queue service
+    @Queue.addCommand(COMMAND_MISC_STOP)
+    static void stopCommand() {
         me.stopAndQuit();
     }
 
-    // Makes a list of methods from a class that have the above annotation
+    // Makes a list of methods from a class that have the Queue.addCommand annotation
     private SparseArray<Method> getQueueCommands(Class src) {
         SparseArray<Method> arr = new SparseArray<>();
         Method[] methods = src.getMethods();
-        Class<?>[] parTypes;
-        Method method;
-        for (int i = 0; i < methods.length; i++) {
-            method = methods[i];
+
+        for (Method method : methods) {
             addCommand cmd = method.getAnnotation(addCommand.class);
-            if (cmd != null) {
-                Log.v(LOG_TAG, "Command method found: " + method.getName());
-                if (!Modifier.isStatic(method.getModifiers())) {
-                    Log.e(LOG_TAG, "Bad Queue command definition at \""
+            if (cmd == null) continue;
+
+            Log.v(LOG_TAG, "Queue command method found: " + method.getName());
+            if (!Modifier.isStatic(method.getModifiers())) {
+                // Only static methods can be queue commands
+                Log.e(LOG_TAG, "Bad queue command definition at \""
+                        + src.getName() + "." + method.getName() + "\"");
+                Log.e(LOG_TAG, "Queue commands must be static");
+            } else if (arr.get(cmd.value()) != null) {
+                // Queue command's can't use duplicate IDs
+                Log.e(LOG_TAG, "Trying to create queue command with duplicate id \""
+                        + cmd.value() + "\" at \""
+                        + src.getName() + "." + method.getName() + "\"");
+            } else {
+                // Make sure the return type is either JSON, or void
+                Class returnClass = method.getReturnType();
+                if (returnClass != JSONObject.class && returnClass != JSONArray.class
+                        && returnClass != void.class) {
+                    Log.e(LOG_TAG, "Bad queue command definition at \""
                             + src.getName() + "." + method.getName() + "\"");
-                    Log.e(LOG_TAG, "Queue commands must be static");
-                } else if (arr.get(cmd.id()) != null) {
-                    // TODO: Command already exists with that id
-                    Log.e(LOG_TAG, "Trying to create queue command with duplicate id \""
-                            + cmd.id() + "\" at \""
-                            + src.getName() + "." + method.getName() + "\"");
+                    Log.e(LOG_TAG, "Return type must be JSONArray, JSONObject, or void");
                 } else {
-                    Log.v(LOG_TAG, "Command added: " + method.getName());
-                    arr.put(cmd.id(), method);
+                    // This command is good, add it to the list
+                    arr.put(cmd.value(), method);
                 }
             }
         }
