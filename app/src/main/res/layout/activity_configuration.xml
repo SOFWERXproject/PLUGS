@@ -7,18 +7,73 @@
     tools:context=".ConfigurationActivity">
 
     <ImageView
-        android:id="@+id/imageView"
+        android:id="@+id/imageBackground"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
         android:scaleType="centerCrop"
-        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="1.0"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:srcCompat="@drawable/lumia" />
 
+    <Button
+        android:id="@+id/buttonActions"
+        android:layout_width="0dp"
+        android:layout_height="100dp"
+        android:layout_marginStart="24dp"
+        android:layout_marginLeft="24dp"
+        android:layout_marginEnd="24dp"
+        android:layout_marginRight="24dp"
+        android:onClick="gotoActions"
+        android:text="Actions"
+        android:textSize="24sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/buttonTriggers"
+        app:layout_constraintTop_toTopOf="@+id/buttonTriggers" />
+
+    <Button
+        android:id="@+id/buttonTriggers"
+        android:layout_width="0dp"
+        android:layout_height="100dp"
+        android:layout_marginBottom="24dp"
+        android:onClick="gotoTriggers"
+        android:text="Triggers"
+        android:textSize="24sp"
+        app:layout_constraintBottom_toTopOf="@+id/buttonGeneral"
+        app:layout_constraintStart_toStartOf="@+id/buttonGeneral" />
+
+    <Button
+        android:id="@+id/buttonHomeStation"
+        android:layout_width="wrap_content"
+        android:layout_height="100dp"
+        android:layout_marginStart="24dp"
+        android:layout_marginLeft="24dp"
+        android:layout_marginEnd="24dp"
+        android:layout_marginRight="24dp"
+        android:onClick="gotoHomeStation"
+        android:text="Home Station"
+        android:textSize="24sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/buttonGeneral"
+        app:layout_constraintTop_toTopOf="@+id/buttonGeneral" />
+
+    <Button
+        android:id="@+id/buttonGeneral"
+        android:layout_width="wrap_content"
+        android:layout_height="100dp"
+        android:layout_marginStart="24dp"
+        android:layout_marginLeft="24dp"
+        android:layout_marginBottom="24dp"
+        android:onClick="gotoGeneral"
+        android:text="General"
+        android:textSize="24sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
     <TextView
-        android:id="@+id/textView3"
+        android:id="@+id/textLabel"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
