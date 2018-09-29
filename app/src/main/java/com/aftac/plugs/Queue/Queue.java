@@ -118,11 +118,11 @@ public class Queue extends Service {
     public static void push(QueueItem item) {
         Bundle bundle = new Bundle();
         bundle.putSerializable("content", item);
+
         Message msg = new Message();
         msg.what = 1;
         msg.setData(bundle);
-        if (!workThread.isAlive())
-            workThread.start();
+
         workHandler.sendMessage(msg);
         Log.v(LOG_TAG, "An item was pushed onto the queue.");
     }
@@ -265,7 +265,8 @@ public class Queue extends Service {
             command.responseHandler.post(() ->
                     command.responseListener.onCommandResponse(returnVal, command));
         }
-        Log.v(LOG_TAG, "Successfully invoked method \"" + method.getName() + "\"");
+        Log.v(LOG_TAG, "Successfully invoked method \""
+                + method.getClass() + "." + method.getName() + "\"");
     }
 
     // Quit the work thread and stop the queue service
