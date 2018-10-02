@@ -23,8 +23,6 @@ public class PlugsSensors {
         sensorManager = (SensorManager)context.getSystemService(Context.SENSOR_SERVICE);
     }
 
-    // The Queue.command annotation for creating queue commands is just an experiment
-    // I'm not sure that it will really work out
     @Queue.addCommand(COMMAND_GET_SENSORS)
     static public JSONArray getSensors(int type, String test) {
         Log.v(LOG_TAG, "Test string: " + test);

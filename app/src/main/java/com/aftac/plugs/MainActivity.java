@@ -17,7 +17,7 @@ import java.util.List;
 
 import static android.hardware.Sensor.TYPE_ALL;
 
-public class MainActivity extends AppCompatActivity implements Queue.onStartedListener {
+public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -25,8 +25,6 @@ public class MainActivity extends AppCompatActivity implements Queue.onStartedLi
         setContentView(R.layout.activity_main);
 
         Intent queueIntent = new Intent(this.getBaseContext(), Queue.class);
-
-        Queue.setStartedListener(this);
         startService(queueIntent);
     }
 
@@ -41,6 +39,11 @@ public class MainActivity extends AppCompatActivity implements Queue.onStartedLi
         Queue.push(command);
     }
 
+    public void gotoDebugMenu(View view) {
+        Intent intent = new Intent(this, DebugMenuActivity.class);
+        startActivity(intent);
+    }
+
     public void gotoConfigure(View view) {
         // onClick action for Configure button in home screen
         Intent intent = new Intent(this, ConfigurationActivity.class);
@@ -51,31 +54,5 @@ public class MainActivity extends AppCompatActivity implements Queue.onStartedLi
         // onClick action for Deploy button in home screen
         Intent intent = new Intent(this, DeployActivity.class);
         startActivity(intent);
-    }
-
-    @Override
-    public void onQueueStarted() {
-        // An example of a command sent to the Queue, and receiving a response
-
-        // Create an array for the command's arguments
-        Object[] args = { Sensor.TYPE_ALL, "Test message" };
-
-        // Build the command
-        Queue.Command command = new Queue.Command(
-                Queue.COMMAND_TARGET_SELF,          // The target device in the mesh network
-                Queue.COMMAND_CLASS_SENSORS,        // Owner "class" of the command
-                PlugsSensors.COMMAND_GET_SENSORS,   // The command id
-                new JSONArray(Arrays.asList(args)));
-
-        // Set a listener for the command's response
-        command.setResponseListener((response, cmd) -> {
-            JSONArray sensorList = (JSONArray)response;
-            try { Log.v("PLUGS", sensorList.toString(1)); }
-            catch (Exception e) { Log.e("PLUGS", "Exception", e); }
-            Log.v("PLUGS", "Number of sensors: " + sensorList.length());
-        });
-
-        // Push the command out to the queue
-        Queue.push(command);
     }
 }
