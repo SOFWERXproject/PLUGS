@@ -8,7 +8,7 @@ import android.widget.TextView;
 
 import com.aftac.plugs.Queue.Queue;
 import com.aftac.plugs.R;
-import com.aftac.plugs.Sensors.PlugsSensors;
+import com.aftac.plugs.Sensors.PlugsSensorManager;
 
 import org.json.JSONArray;
 
@@ -38,7 +38,7 @@ public class QueueDebugActivity extends AppCompatActivity {
         Queue.Command command = new Queue.Command(
                 Queue.COMMAND_TARGET_SELF,          // The target device in the mesh network
                 Queue.COMMAND_CLASS_SENSORS,        // Owner "class" of the command
-                PlugsSensors.COMMAND_GET_SENSORS,   // The command id
+                PlugsSensorManager.COMMAND_GET_SENSORS,   // The command id
                 new JSONArray(Arrays.asList(args)));
 
         // Set a listener for the command's response

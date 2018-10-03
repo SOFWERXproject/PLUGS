@@ -1,20 +1,12 @@
 package com.aftac.plugs.DebugActivities;
 
 import android.content.Intent;
-import android.hardware.Sensor;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 
-import com.aftac.plugs.Queue.Queue;
 import com.aftac.plugs.R;
-import com.aftac.plugs.Sensors.PlugsSensors;
-
-import org.json.JSONArray;
-
-import java.util.Arrays;
 
 public class DebugMenuActivity extends AppCompatActivity{
     private static final int MY_PERMISSIONS_ACCESS_COARSE_LOCATION = 42;

@@ -12,7 +12,7 @@ import android.os.Message;
 import android.util.Log;
 import android.util.SparseArray;
 
-import com.aftac.plugs.Sensors.PlugsSensors;
+import com.aftac.plugs.Sensors.PlugsSensorManager;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -27,7 +27,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 
 public class Queue extends Service {
-    private static final String LOG_TAG = "PLUGS.Queue";
+    private static final String LOG_TAG =  Queue.class.getSimpleName();
 
     public static final int COMMAND_TARGET_NONE = 0x00000000;
     public static final int COMMAND_TARGET_SELF = 0xFFFFFFFE;
@@ -53,7 +53,6 @@ public class Queue extends Service {
     private static SparseArray<Method> sensorCommands;
 
     private static Queue me;
-    private static PlugsSensors plugsSensors;
 
     private static int myId = 1;
     volatile private static Boolean running = false;
@@ -164,12 +163,12 @@ public class Queue extends Service {
         Privates
     */
     private void init() {
-        plugsSensors = new PlugsSensors(this.getBaseContext());
+        PlugsSensorManager.init(this.getBaseContext());
 
         // Populate the command lists in the work thread
         workHandler.post(() -> {
             miscCommands = getQueueCommands(this.getClass());
-            sensorCommands = getQueueCommands(PlugsSensors.class);
+            sensorCommands = getQueueCommands(PlugsSensorManager.class);
 
             if (startListener != null) mainHandler.post(() -> startListener.onQueueStarted());
         });
