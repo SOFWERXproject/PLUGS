@@ -27,9 +27,9 @@ public class PlugsSensorEvent {
         accuracy = data.getInt();
         
         if (standardSensor) {
-            FloatBuffer floatBuf = data.slice().asFloatArray();
+            FloatBuffer floatBuf = data.slice().asFloatBuffer();
             values = new float[floatBuf.limit() - floatBuf.position()];
-            floatBuf.get[values];
+            floatBuf.get(values);
         }
         
         data.mark();

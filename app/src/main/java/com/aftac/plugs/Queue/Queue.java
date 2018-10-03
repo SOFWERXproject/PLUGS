@@ -12,6 +12,7 @@ import android.os.Message;
 import android.util.Log;
 import android.util.SparseArray;
 
+import com.aftac.plugs.MeshNetwork.MeshManager;
 import com.aftac.plugs.Sensors.PlugsSensorManager;
 
 import org.json.JSONArray;
@@ -51,6 +52,7 @@ public class Queue extends Service {
 
     private static SparseArray<Method> miscCommands;
     private static SparseArray<Method> sensorCommands;
+    private static SparseArray<Method> meshCommands;
 
     private static Queue me;
 
@@ -169,6 +171,7 @@ public class Queue extends Service {
         workHandler.post(() -> {
             miscCommands = getQueueCommands(this.getClass());
             sensorCommands = getQueueCommands(PlugsSensorManager.class);
+            meshCommands = getQueueCommands(MeshManager.class);
 
             if (startListener != null) mainHandler.post(() -> startListener.onQueueStarted());
         });
