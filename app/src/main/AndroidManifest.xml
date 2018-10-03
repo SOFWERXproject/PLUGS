@@ -24,7 +24,10 @@
         </activity>
 
         <activity android:name=".DebugActivities.DebugMenuActivity" />
-        <activity android:name=".DebugActivities.MeshDebugActivity" />
+        <activity android:name=".DebugActivities.MeshDebugActivity"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar"/>
+        <activity android:name=".DebugActivities.QueueDebugActivity"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar"/>
 
         <activity android:name=".ConfigurationActivity" />
         <activity android:name=".DeployActivity" />
@@ -39,7 +42,7 @@
         <activity android:name=".TriggersActivity" />
         <activity android:name=".ActionsActivity" />
         <activity android:name=".HomeStationActivity" />
-        <activity android:name=".GeneralActivity"></activity>
+        <activity android:name=".GeneralActivity" />
     </application>
 
 </manifest>

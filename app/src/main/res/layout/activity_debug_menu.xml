@@ -71,8 +71,9 @@
                 android:layout_height="100dp"
                 android:layout_margin="12dp"
                 android:layout_weight="1"
-                android:text="Sensors"
-                android:textSize="24sp"/>
+                android:text="Queue"
+                android:textSize="24sp"
+                android:onClick="gotoDebugQueue"/>
 
         </TableRow>
 
@@ -86,8 +87,9 @@
                 android:layout_height="100dp"
                 android:layout_margin="12dp"
                 android:layout_weight="1"
-                android:text="----"
-                android:textSize="24dp" />
+                android:text="Sensors"
+                android:textSize="24dp"
+                android:onClick="gotoDebugSensors"/>
 
             <Button
                 android:id="@+id/buttonDebug4"
