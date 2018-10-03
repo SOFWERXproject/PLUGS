@@ -86,13 +86,13 @@ class PlugsSensorWrapper implements SensorEventListener {
                 bestMilliOffset = milliOffset;
             utcTimestamp -= milliOffset - bestMilliOffset;
             */
-
+        
         // Create a byte array to hold the sensor event data
         byte[] data = new byte[
                                     Integer.BYTES * 3
                                   + Long.BYTES * 2
                                   + Float.BYTES * event.values.length];
-
+        
         // Write the sensor event data into the array through a ByteBuffer
         ByteBuffer buf = ByteBuffer.wrap(data);
         buf.order(ByteOrder.LITTLE_ENDIAN);
@@ -101,13 +101,15 @@ class PlugsSensorWrapper implements SensorEventListener {
         buf.putLong(event.timestamp);
         buf.putLong(utcTimestamp);
         buf.putInt(event.accuracy);
-        for (float value : event.values) buf.putFloat(value);
-
+        // Use slice to get a reference sharing the same buffer starting at the current location
+        // then use it as a FloatBuffer to write the values float array into it.
+        buf.slice().asFloatBuffer().put(event.values);
+        
         // Create a bundle to hold the data array
         Bundle bundle = new Bundle();
         bundle.putInt("sensorId", id);
         bundle.putByteArray("data", data);
-
+        
         // Package the bundle into a message, and send it to the work handler
         Message msg = new Message();
         msg.setData(bundle); msg.what = 0;
