@@ -105,6 +105,9 @@ class PlugsSensorWrapper implements SensorEventListener {
         // then use it as a FloatBuffer to write the values float array into it.
         buf.slice().asFloatBuffer().put(event.values);
         
+        // Reset buffer position
+        buf.position(0);
+        
         // Create a bundle to hold the data array
         Bundle bundle = new Bundle();
         bundle.putInt("sensorId", id);
