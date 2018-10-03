@@ -1,16 +1,15 @@
-package com.aftac.plugs;
+package com.aftac.plugs.DebugActivities;
 
-import android.Manifest;
-import android.content.pm.PackageManager;
+import android.content.Intent;
 import android.hardware.Sensor;
 import android.os.Bundle;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.View;
 import android.widget.TextView;
 
 import com.aftac.plugs.Queue.Queue;
+import com.aftac.plugs.R;
 import com.aftac.plugs.Sensors.PlugsSensors;
 
 import org.json.JSONArray;
@@ -27,6 +26,11 @@ public class DebugMenuActivity extends AppCompatActivity{
         setContentView(R.layout.activity_debug_menu);
 
         test_queue();
+    }
+
+    public void gotoDebugMesh(View view) {
+        Intent intent = new Intent(this, MeshDebugActivity.class);
+        startActivity(intent);
     }
 
 

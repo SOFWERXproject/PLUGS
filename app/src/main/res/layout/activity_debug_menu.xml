@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".DebugMenuActivity">
+    tools:context=".DebugActivities.DebugMenuActivity">
 
     <ImageView
         android:id="@+id/imageView"
@@ -63,7 +63,8 @@
                 android:layout_margin="12dp"
                 android:layout_weight="1"
                 android:text="Mesh"
-                android:textSize="24dp" />
+                android:textSize="24dp"
+                android:onClick="gotoDebugMesh"/>
 
             <Button
                 android:id="@+id/buttonDebugSensors"
@@ -71,7 +72,7 @@
                 android:layout_margin="12dp"
                 android:layout_weight="1"
                 android:text="Sensors"
-                android:textSize="24sp" />
+                android:textSize="24sp"/>
 
         </TableRow>
 
