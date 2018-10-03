@@ -60,6 +60,7 @@ class PlugsSensorWrapper implements SensorEventListener {
         running = false;
     }
 
+    
     // Free this Sensor wrapper so it can be recycled
     void free() {
         synchronized (listeners) { synchronized (this) {
@@ -104,6 +105,7 @@ class PlugsSensorWrapper implements SensorEventListener {
 
         // Create a bundle to hold the data array
         Bundle bundle = new Bundle();
+        bundle.putInt("sensorId", id);
         bundle.putByteArray("data", data);
 
         // Package the bundle into a message, and send it to the work handler
