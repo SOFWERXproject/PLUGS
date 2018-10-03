@@ -93,20 +93,23 @@ class PlugsSensorWrapper implements SensorEventListener {
                                   + Long.BYTES * 2
                                   + Float.BYTES * event.values.length];
         
-        // Write the sensor event data into the array through a ByteBuffer
+        // Create a ByteBuffer to hold the sensor event data
         ByteBuffer buf = ByteBuffer.wrap(data);
         buf.order(ByteOrder.LITTLE_ENDIAN);
+        buf.mark();
+        
+        // Write the sensor event data into the ByteBuffer
         buf.putInt(id | 0x80000000); // The 0x80000000 is to mark this as a standard Android sensor
         buf.putInt(sensorType);
         buf.putLong(event.timestamp);
         buf.putLong(utcTimestamp);
         buf.putInt(event.accuracy);
-        // Use slice to get a reference sharing the same buffer starting at the current location
+        // Use slice to get a reference sharing the same buffer starting at it's current position
         // then use it as a FloatBuffer to write the values float array into it.
         buf.slice().asFloatBuffer().put(event.values);
         
         // Reset buffer position
-        buf.position(0);
+        buf.reset();
         
         // Create a bundle to hold the data array
         Bundle bundle = new Bundle();
