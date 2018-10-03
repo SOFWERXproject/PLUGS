@@ -31,5 +31,7 @@ public class PlugsSensorEvent {
             values = new float[floatBuf.limit() - floatBuf.position()];
             floatBuf.get[values];
         }
+        
+        data.mark();
     }
 }
