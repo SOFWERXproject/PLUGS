@@ -12,7 +12,6 @@ import android.os.Message;
 import android.util.Log;
 import android.util.SparseArray;
 
-import com.aftac.plugs.MeshNetwork.MeshManager;
 import com.aftac.plugs.Sensors.PlugsSensorManager;
 
 import org.json.JSONArray;
