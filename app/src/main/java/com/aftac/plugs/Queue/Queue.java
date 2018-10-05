@@ -170,7 +170,7 @@ public class Queue extends Service {
         workHandler.post(() -> {
             miscCommands = getQueueCommands(this.getClass());
             sensorCommands = getQueueCommands(PlugsSensorManager.class);
-            meshCommands = getQueueCommands(MeshManager.class);
+            //meshCommands = getQueueCommands(MeshManager.class);
 
             if (startListener != null) mainHandler.post(() -> startListener.onQueueStarted());
         });

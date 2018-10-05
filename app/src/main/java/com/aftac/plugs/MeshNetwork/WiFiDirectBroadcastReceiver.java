@@ -26,6 +26,8 @@ import android.net.wifi.p2p.WifiP2pManager.Channel;
 import android.net.wifi.p2p.WifiP2pManager.PeerListListener;
 import android.util.Log;
 
+import com.aftac.plugs.R;
+
 /**
  * A BroadcastReceiver that notifies of important wifi p2p events.
  */

@@ -36,6 +36,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import com.aftac.plugs.R;
 import com.example.android.wifidirect.DeviceListFragment.DeviceActionListener;
 
 import java.io.File;

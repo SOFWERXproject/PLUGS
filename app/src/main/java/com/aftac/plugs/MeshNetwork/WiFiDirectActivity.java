@@ -36,6 +36,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
+import com.aftac.plugs.R;
 import com.example.android.wifidirect.DeviceListFragment.DeviceActionListener;
 
 /**
