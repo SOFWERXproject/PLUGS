@@ -19,22 +19,26 @@ package com.aftac.plugs.MeshNetwork;
 import android.app.Fragment;
 import android.app.ProgressDialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.net.wifi.WpsInfo;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
+import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pInfo;
+import android.net.wifi.p2p.WifiP2pManager;
 import android.net.wifi.p2p.WifiP2pManager.ConnectionInfoListener;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.aftac.plugs.R;
 
@@ -43,24 +47,35 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetAddress;
+import java.net.InterfaceAddress;
+import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
+
+import javax.net.ServerSocketFactory;
+
+import static com.aftac.plugs.MeshNetwork.WiFiDirectActivity.LOG_TAG;
 
 /**
  * A fragment that manages a particular peer and allows interaction with device
  * i.e. setting up network connection and transferring data.
  */
-public class DeviceDetailFragment extends Fragment implements ConnectionInfoListener {
+public class DeviceDetailFragment extends Fragment implements ConnectionInfoListener, WifiP2pManager.GroupInfoListener {
 
     protected static final int CHOOSE_FILE_RESULT_CODE = 20;
     private View mContentView = null;
     private WifiP2pDevice device;
     private WifiP2pInfo info;
+    private WifiP2pGroup iface;
+    private InetAddress iNetAddr;
+    private Handler mainHandler;
     ProgressDialog progressDialog = null;
 
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
+        mainHandler = new Handler(Looper.getMainLooper());
     }
 
     @Override
@@ -119,13 +134,15 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
-
         // User has picked an image. Transfer it to group owner i.e peer using
         // FileTransferService.
+
         Uri uri = data.getData();
         TextView statusText = (TextView) mContentView.findViewById(R.id.status_text);
         statusText.setText("Sending: " + uri);
-        Log.d(WiFiDirectActivity.LOG_TAG, "Intent----------- " + uri);
+        Log.v(LOG_TAG, "Sending: " + uri);
+
+        Log.d(LOG_TAG, "Intent----------- " + uri);
         Intent serviceIntent = new Intent(getActivity(), FileTransferService.class);
         serviceIntent.setAction(FileTransferService.ACTION_SEND_FILE);
         serviceIntent.putExtra(FileTransferService.EXTRAS_FILE_PATH, uri.toString());
@@ -133,6 +150,11 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
                 info.groupOwnerAddress.getHostAddress());
         serviceIntent.putExtra(FileTransferService.EXTRAS_GROUP_OWNER_PORT, 8988);
         getActivity().startService(serviceIntent);
+
+        Toast toast = Toast.makeText(getActivity(), "File transfer started", Toast.LENGTH_LONG);
+        toast.show();
+
+        Log.v(LOG_TAG, "File transfer started");
     }
 
     @Override
@@ -157,7 +179,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         // server. The file server is single threaded, single connection server
         // socket.
         if (info.groupFormed && info.isGroupOwner) {
-            new FileServerAsyncTask(getActivity(), mContentView.findViewById(R.id.status_text))
+            new FileServerAsyncTask(getActivity(), mContentView.findViewById(R.id.status_text), iNetAddr)
                     .execute();
         } else if (info.groupFormed) {
             // The other device acts as the client. In this case, we enable the
@@ -203,6 +225,15 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         this.getView().setVisibility(View.GONE);
     }
 
+    @Override
+    public void onGroupInfoAvailable(WifiP2pGroup group) {
+        try {
+            String iFaceName = group.getInterface();
+            NetworkInterface  iface = NetworkInterface.getByName(iFaceName);
+            this.iNetAddr = iface.getInetAddresses().nextElement();
+        } catch (Exception e) { e.printStackTrace(); }
+    }
+
     /**
      * A simple server socket that accepts connection and writes some data on
      * the stream.
@@ -211,25 +242,33 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
 
         private Context context;
         private TextView statusText;
+        private InetAddress iNetAddr;
 
         /**
          * @param context
          * @param statusText
          */
-        public FileServerAsyncTask(Context context, View statusText) {
+        public FileServerAsyncTask(Context context, View statusText, InetAddress iNetAddr) {
             this.context = context;
             this.statusText = (TextView) statusText;
+            this.iNetAddr = iNetAddr;
         }
 
         @Override
         protected String doInBackground(Void... params) {
             try {
-                ServerSocket serverSocket = new ServerSocket(8988);
-                Log.d(WiFiDirectActivity.LOG_TAG, "Server: Socket opened");
+                ServerSocket serverSocket = new ServerSocket(8988, 0, iNetAddr);
+
+                Log.d(LOG_TAG, "Server: Socket opened");
+
+                statusText.setText("Server: Socket opened");
                 Socket client = serverSocket.accept();
-                Log.d(WiFiDirectActivity.LOG_TAG, "Server: connection done");
-                final File f = new File(Environment.getExternalStorageDirectory() + "/"
-                        + context.getPackageName() + "/wifip2pshared-" + System.currentTimeMillis()
+                Log.d(LOG_TAG, "Server: connection done");
+                (new Handler(Looper.getMainLooper())).post(() -> {
+                    statusText.setText("Server: connection done");
+                });
+                final File f = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + "/"
+                        + "/wifip2pshared-" + System.currentTimeMillis()
                         + ".jpg");
 
                 File dirs = new File(f.getParent());
@@ -237,13 +276,13 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
                     dirs.mkdirs();
                 f.createNewFile();
 
-                Log.d(WiFiDirectActivity.LOG_TAG, "server: copying files " + f.toString());
+                Log.d(LOG_TAG, "server: copying files " + f.toString());
                 InputStream inputstream = client.getInputStream();
                 copyFile(inputstream, new FileOutputStream(f));
                 serverSocket.close();
                 return f.getAbsolutePath();
             } catch (IOException e) {
-                Log.e(WiFiDirectActivity.LOG_TAG, e.getMessage());
+                Log.e(LOG_TAG, e.getMessage());
                 return null;
             }
         }
@@ -259,9 +298,12 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
                 Intent intent = new Intent();
                 intent.setAction(android.content.Intent.ACTION_VIEW);
                 intent.setDataAndType(Uri.parse("file://" + result), "image/*");
-                context.startActivity(intent);
-            }
+                try { context.startActivity(intent); }
+                catch (Exception e) { e.printStackTrace(); }
 
+                Toast toast = Toast.makeText(context, "File copied - " + result, Toast.LENGTH_LONG);
+                toast.show();
+            }
         }
 
         /*
@@ -286,7 +328,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
             out.close();
             inputStream.close();
         } catch (IOException e) {
-            Log.d(WiFiDirectActivity.LOG_TAG, e.toString());
+            Log.d(LOG_TAG, e.toString());
             return false;
         }
         return true;
