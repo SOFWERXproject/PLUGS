@@ -36,12 +36,8 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
-<<<<<<< HEAD
-import com.aftac.plugs.MeshNetwork.DeviceDetailFragment.DeviceActionListener;
-=======
+import com.aftac.plugs.MeshNetwork.DeviceListFragment.DeviceActionListener;
 import com.aftac.plugs.R;
-import com.example.android.wifidirect.DeviceListFragment.DeviceActionListener;
->>>>>>> a6f20e1b8ea2f1ab847abb701d3d0037b0cc39a1
 
 /**
  * An activity that uses WiFi Direct APIs to discover and connect with available
@@ -71,7 +67,7 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.main);
+        setContentView(R.layout.activity_debug_mesh);
 
         // add necessary intent values to be matched.
 

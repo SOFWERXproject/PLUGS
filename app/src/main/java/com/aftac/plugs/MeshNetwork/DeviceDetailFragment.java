@@ -37,7 +37,6 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import com.aftac.plugs.R;
-import com.example.android.wifidirect.DeviceListFragment.DeviceActionListener;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -67,7 +66,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 
-        mContentView = inflater.inflate(R.layout.device_detail, null);
+        mContentView = inflater.inflate(R.layout.activity_debug_mesh_device_detail, null);
         mContentView.findViewById(R.id.btn_connect).setOnClickListener(new View.OnClickListener() {
 
             @Override
@@ -88,7 +87,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
 //                            }
 //                        }
                 );
-                ((DeviceActionListener) getActivity()).connect(config);
+                ((DeviceListFragment.DeviceActionListener) getActivity()).connect(config);
 
             }
         });
@@ -98,7 +97,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
 
                     @Override
                     public void onClick(View v) {
-                        ((DeviceActionListener) getActivity()).disconnect();
+                        ((DeviceListFragment.DeviceActionListener) getActivity()).disconnect();
                     }
                 });
 
