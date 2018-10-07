@@ -15,9 +15,9 @@ package="com.aftac.plugs">
 
 <application
     android:allowBackup="true"
-    android:icon="@mipmap/PlugsIcon"
+    android:icon="@mipmap/plugs_icon"
     android:label="@string/app_name"
-    android:roundIcon="@mipmap/PlugsIcon"
+    android:roundIcon="@mipmap/plugs_icon"
     android:supportsRtl="true"
     android:theme="@style/Theme.AppCompat.NoActionBar">
     <activity android:name=".MainActivity">
@@ -32,7 +32,7 @@ package="com.aftac.plugs">
     <activity android:name=".DebugActivities.MeshDebugActivity"
         android:theme="@style/Theme.AppCompat.Light.NoActionBar"/>
     <activity android:name=".MeshNetwork.WiFiDirectActivity"
-        android:theme="@style/Theme.AppCompat.Light.DarkActionBar"/>
+        android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
     <activity android:name=".DebugActivities.QueueDebugActivity"
         android:theme="@style/Theme.AppCompat.Light.NoActionBar"/>
 
@@ -43,7 +43,7 @@ package="com.aftac.plugs">
         android:name=".Queue.Queue"
         android:enabled="true"
         android:exported="false"
-        android:icon="@mipmap/PlugsIcon"
+        android:icon="@mipmap/plugs_icon"
         android:label="Queue" />
 
     <activity android:name=".TriggersActivity" />
