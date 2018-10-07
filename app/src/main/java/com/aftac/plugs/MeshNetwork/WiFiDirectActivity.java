@@ -36,7 +36,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
-import com.example.android.wifidirect.DeviceListFragment.DeviceActionListener;
+import com.aftac.plugs.MeshNetwork.DeviceDetailFragment.DeviceActionListener;
 
 /**
  * An activity that uses WiFi Direct APIs to discover and connect with available
