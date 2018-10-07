@@ -70,7 +70,7 @@ public class WiFiDirectBroadcastReceiver extends BroadcastReceiver {
                 activity.resetData();
 
             }
-            Log.d(WiFiDirectActivity.TAG, "P2P state changed - " + state);
+            Log.d(WiFiDirectActivity.LOG_TAG, "P2P state changed - " + state);
         } else if (WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION.equals(action)) {
 
             // request available peers from the wifi p2p manager. This is an
@@ -80,7 +80,7 @@ public class WiFiDirectBroadcastReceiver extends BroadcastReceiver {
                 manager.requestPeers(channel, (PeerListListener) activity.getFragmentManager()
                         .findFragmentById(R.id.frag_list));
             }
-            Log.d(WiFiDirectActivity.TAG, "P2P peers changed");
+            Log.d(WiFiDirectActivity.LOG_TAG, "P2P peers changed");
         } else if (WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION.equals(action)) {
 
             if (manager == null) {

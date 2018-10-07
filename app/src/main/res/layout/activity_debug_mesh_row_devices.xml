@@ -4,7 +4,8 @@
     android:layout_width="fill_parent"
     android:layout_height="?android:attr/listPreferredItemHeight"
     android:background="?android:attr/activatedBackgroundIndicator"
-    android:padding="6dip">
+    android:padding="6dip"
+    android:theme="@style/Theme.AppCompat.Light.DarkActionBar">
 
     <LinearLayout
         android:orientation="vertical"

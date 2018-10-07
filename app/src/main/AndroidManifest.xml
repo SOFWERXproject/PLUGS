@@ -6,10 +6,12 @@
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.INTERNET"/>
 
-    <uses-feature android:name="android.hardware.wifi.direct"/>
+    <uses-feature android:name="android.hardware.wifi.direct" android:required="true" />
 
     <application
         android:allowBackup="true"
@@ -29,6 +31,8 @@
         <activity android:name=".DebugActivities.DebugMenuActivity" />
         <activity android:name=".DebugActivities.MeshDebugActivity"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar"/>
+        <activity android:name=".MeshNetwork.WiFiDirectActivity"
+            android:theme="@style/Theme.AppCompat.Light.DarkActionBar"/>
         <activity android:name=".DebugActivities.QueueDebugActivity"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar"/>
 

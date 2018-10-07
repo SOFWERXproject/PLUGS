@@ -6,6 +6,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.TextView;
 
+import com.aftac.plugs.MeshNetwork.WiFiDirectActivity;
 import com.aftac.plugs.R;
 
 public class DebugMenuActivity extends AppCompatActivity{
@@ -19,7 +20,7 @@ public class DebugMenuActivity extends AppCompatActivity{
     }
 
     public void gotoDebugMesh(View view) {
-        Intent intent = new Intent(this, MeshDebugActivity.class);
+        Intent intent = new Intent(this, WiFiDirectActivity.class);
         startActivity(intent);
     }
 
