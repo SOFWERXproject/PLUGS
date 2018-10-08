@@ -7,17 +7,18 @@ import java.nio.ByteBuffer;
 public class MeshDevice {
     String id;
     String name;
+    int status = 0;
+    boolean isAvailable  = false;
+    boolean isConnecting = false;
+    boolean isConnected  = false;
 
-
-    MeshDevice(ByteBuffer data) {
-        //this.id = data.getString();
-        //this.deviceName = data.slice().toString();
-    }
     MeshDevice(String id, String name) {
         this.id = id;
         this.name = name;
     }
 
-    public String getId() { return id; }
+    public String getId()   { return id; }
     public String getName() { return name; }
+    public boolean isConnected() { return isConnected; }
+    public boolean isConnecting() { return isConnecting; }
 }

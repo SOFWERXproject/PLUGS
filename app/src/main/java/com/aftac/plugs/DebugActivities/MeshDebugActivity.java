@@ -1,7 +1,5 @@
 package com.aftac.plugs.DebugActivities;
 
-import android.net.wifi.p2p.WifiP2pDevice;
-import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -12,9 +10,6 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ListView;
 import android.widget.TextView;
 
 import com.aftac.plugs.MeshNetwork.MeshManager;
@@ -30,18 +25,15 @@ public class MeshDebugActivity extends AppCompatActivity
 
     RecyclerView peerListView;
     RecyclerView.LayoutManager listLayoutManager;
-    ListView listView;
-    TextView read_msg_box, connectionStatus;
-    EditText writeMSg;
-    List<MeshDevice> availableDevices;
-    List<MeshDevice> connectedDevices;
+    TextView txtStatus;
+    List<MeshDevice> devices;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_debug_mesh2);
 
-        peerListView = (RecyclerView) findViewById(R.id.mesh_peers_list);
+        peerListView = findViewById(R.id.mesh_peers_list);
         peerListView.setHasFixedSize(true);
 
         listLayoutManager = new LinearLayoutManager(this);
@@ -49,11 +41,10 @@ public class MeshDebugActivity extends AppCompatActivity
 
         peerListView.setAdapter(peerListAdapter);
 
+        txtStatus = findViewById(R.id.txt_mesh_status);
 
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-
-        //read_msg_box = findViewById(R.id.txt_debug_mesh);
 
         if (!MeshManager.isEnabled())
             MeshManager.init(getBaseContext());
@@ -62,15 +53,14 @@ public class MeshDebugActivity extends AppCompatActivity
     @Override
     public void onResume() {
         super.onResume();
-        //if (!MeshManager.isConnected() && !MeshManager.isListening())
         MeshManager.startPeerDiscovery();
         MeshManager.addOnPeersChangedListener(this);
         MeshManager.addOnStatusChangedListener(this);
 
-        if (MeshManager.isListening())
-            setStatusText("Listening for peers");
-        else if (MeshManager.isConnected())
+        if (MeshManager.isConnected())
             setStatusText("Connected to network");
+        else if (MeshManager.isListening())
+            setStatusText("Listening for peers");
         else if (MeshManager.isEnabled())
             setStatusText("Idle");
     }
@@ -89,10 +79,9 @@ public class MeshDebugActivity extends AppCompatActivity
     }
 
     @Override
-    public void onMeshPeersChanged(List<MeshDevice> available, List<MeshDevice> connected) {
+    public void onMeshPeersChanged(List<MeshDevice> devices) {
         Log.v(LOG_TAG, "Peer list updated");
-        availableDevices = available;
-        connectedDevices = connected;
+        this.devices = devices;
         peerListAdapter.notifyDataSetChanged();
     }
 
@@ -132,61 +121,37 @@ public class MeshDebugActivity extends AppCompatActivity
 
         @Override
         public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
-            int length = connectedDevices.size();
-            if (position < length)
-                ((PeerViewHolder)holder).setDevice(connectedDevices.get(position), true);
-            else
-                ((PeerViewHolder)holder).setDevice(availableDevices.get(position - length), false);
+            MeshDevice device = devices.get(position);
+            ((PeerViewHolder)holder).setDevice(device, device.isConnected());
         }
 
         @Override
         public int getItemCount() {
-            return  (availableDevices != null ? availableDevices.size() : 0)
-                  + (connectedDevices != null ? connectedDevices.size() : 0);
+            return  (devices != null ? devices.size() : 0);
         }
 
         class PeerViewHolder extends RecyclerView.ViewHolder {
-            public View myView;
+            private View myView;
             private String deviceName;
             private String deviceId;
 
-            public PeerViewHolder(View v) {
-                super(v);
-                v.findViewById(R.id.device_name);
+            PeerViewHolder(View view) {
+                super(view);
+                view.findViewById(R.id.device_name);
 
-                myView = v;
-                myView.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        MeshManager.connectTo(deviceId);
-                    }
-                });
+                myView = view;
+                myView.setOnClickListener((v) -> MeshManager.connectTo(deviceId));
             }
 
             void setDevice(MeshDevice device, boolean connected) {
                 this.deviceName = device.getName();
                 this.deviceId = device.getId();
-                ((TextView)myView.findViewById(R.id.device_name)).setText(deviceName + " (" + deviceId + ")");
+                ((TextView)myView.findViewById(R.id.device_name))
+                            .setText(deviceName + " (" + deviceId + ")");
                 ((TextView)myView.findViewById(R.id.device_details)).setText(
-                        (connected ? "Connected" : "Available"));
+                            (device.isConnected() ? "Connected" :
+                            (device.isConnecting() ? "Connecting" : "Available")));
             }
-
-            /*String convertStatus(int status) {
-                switch (device.getStatus()) {
-                    case WifiP2pDevice.AVAILABLE:
-                        return "Available";
-                    case WifiP2pDevice.INVITED:
-                        return "Invited";
-                    case WifiP2pDevice.CONNECTED:
-                        return "Connected";
-                    case WifiP2pDevice.FAILED:
-                        return "Failed";
-                    case WifiP2pDevice.UNAVAILABLE:
-                        return "Unavailable";
-                    default:
-                        return "Unknown";
-                }
-            }*/
         }
     };
 }
