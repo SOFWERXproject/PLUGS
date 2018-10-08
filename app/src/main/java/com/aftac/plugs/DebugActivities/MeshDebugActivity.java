@@ -16,6 +16,9 @@ import com.aftac.plugs.MeshNetwork.MeshDevice;
 import com.aftac.plugs.Queue.Queue;
 import com.aftac.plugs.R;
 
+import org.json.JSONArray;
+
+import java.util.Arrays;
 import java.util.List;
 
 public class MeshDebugActivity extends AppCompatActivity
@@ -104,6 +107,9 @@ public class MeshDebugActivity extends AppCompatActivity
                         "Disconnected from network");
                 peerListAdapter.notifyDataSetChanged();
             break;
+            case MeshManager.STATE_DEVICE_ID_CHANGED_FLAG:
+                TextView txtLocalName = findViewById(R.id.txt_mesh_local_name);
+                txtLocalName.setText(Queue.getName() + " (" + MeshManager.getMyDeviceId() + ")");
             case MeshManager.STATE_ERROR_OCCURRED_FLAG:
             break;
         }
@@ -140,7 +146,7 @@ public class MeshDebugActivity extends AppCompatActivity
                 view.findViewById(R.id.device_name);
 
                 myView = view;
-                myView.setOnClickListener((v) -> MeshManager.connectTo(deviceId));
+                myView.setOnClickListener((v) -> MeshManager.addToMeshGroup(deviceId) );
             }
 
             void setDevice(MeshDevice device, boolean connected) {

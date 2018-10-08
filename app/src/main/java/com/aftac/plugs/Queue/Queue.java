@@ -26,6 +26,8 @@ import java.lang.annotation.Target;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 public class Queue extends Service {
     private static final String LOG_TAG =  Queue.class.getSimpleName();
@@ -59,6 +61,7 @@ public class Queue extends Service {
     private static String name = "Plugs-";
     private static int myId = 1;
     volatile private static Boolean running = false;
+    private static boolean initialized = false;
 
 
     public static String getName() { return name; }
@@ -86,6 +89,32 @@ public class Queue extends Service {
             this.commandId = commandId;
             this.args = args;
         }
+        public Command(ByteBuffer buf) {
+            targetId     = buf.getInt();
+            commandClass = buf.getInt();
+            commandId    = buf.getInt();
+            try {
+                ByteBuffer sliced = buf.slice();
+                byte[] bytes = new byte[sliced.remaining()];
+                sliced.get(bytes);
+                args = new JSONArray(new String(buf.slice().array(), "UTF-8"));
+            } catch (Exception e) { e.printStackTrace(); }
+        }
+
+        public byte[] toBytes() {
+            ByteBuffer ret;
+
+            String argStr = args.toString();
+            ret = ByteBuffer.wrap(new byte[12 + argStr.length() + 1]);
+
+            ret.putInt(targetId);
+            ret.putInt(commandClass);
+            ret.putInt(commandId);
+            ret.put(argStr.getBytes());
+            ret.put((byte)0);
+
+            return ret.array();
+        };
 
         // A handler can be set for the responseListener, or just make one for the calling thread
         public void setResponseListener(CommandResponseListener listener, Handler handler) {
@@ -103,6 +132,8 @@ public class Queue extends Service {
     public static abstract class Trigger extends QueueItem {
         @Override
         int getType() { return ITEM_TYPE_TRIGGER; }
+
+        abstract void Trigger(ByteBuffer buf);
     }
 
     private static onStartedListener startListener = null;
@@ -146,18 +177,22 @@ public class Queue extends Service {
         running = true;
         me = this;
 
-        // Get a handler for the main thread
-        mainHandler = new Handler(getMainLooper());
+        if (!initialized) {
+            initialized = true;
 
-        // Create a work thread and handler for the Queue service
-        workThread = new HandlerThread(getClass().getName(), Thread.MAX_PRIORITY);
-        workThread.start();
-        workHandler = new Handler(workThread.getLooper(), workCallback);
+            // Get a handler for the main thread
+            mainHandler = new Handler(getMainLooper());
 
-        // TODO: startForeground(id, notification);
+            // Create a work thread and handler for the Queue service
+            workThread = new HandlerThread(getClass().getName(), Thread.MAX_PRIORITY);
+            workThread.start();
+            workHandler = new Handler(workThread.getLooper(), workCallback);
 
-        // Do the rest of the initialization in the work thread
-        workHandler.post(this::init);
+            // TODO: startForeground(id, notification);
+
+            // Do the rest of the initialization in the work thread
+            workHandler.post(this::init);
+        }
 
         readIntent(intent);
         return START_STICKY;
@@ -248,6 +283,10 @@ public class Queue extends Service {
             case COMMAND_CLASS_SENSORS:
                 list = sensorCommands;
                 break;
+            case COMMAND_CLASS_MESH_NET:
+                list = meshCommands;
+                break;
+
             default:
                 // TODO: Invalid Command Class
                 return;
