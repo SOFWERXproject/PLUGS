@@ -48,12 +48,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
-import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
-
-import javax.net.ServerSocketFactory;
+import java.util.ArrayList;
 
 import static com.aftac.plugs.MeshNetwork.WiFiDirectActivity.LOG_TAG;
 
@@ -67,9 +65,10 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
     private View mContentView = null;
     private WifiP2pDevice device;
     private WifiP2pInfo info;
-    private WifiP2pGroup iface;
     private InetAddress iNetAddr;
     private Handler mainHandler;
+    private ServerSocket listenerSocket;
+    private ArrayList<Socket> sockets;
     ProgressDialog progressDialog = null;
 
     @Override
@@ -171,9 +170,19 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
                 + ((info.isGroupOwner == true) ? getResources().getString(R.string.yes)
                 : getResources().getString(R.string.no)));
 
+
+
+
         // InetAddress from WifiP2pInfo struct.
         view = (TextView) mContentView.findViewById(R.id.device_info);
         view.setText("Group Owner IP - " + info.groupOwnerAddress.getHostAddress());
+
+        if (info.groupFormed && info.isGroupOwner) {
+            try { listenerSocket = new ServerSocket(8988, 0, iNetAddr); }
+            catch (Exception e) { e.printStackTrace(); }
+
+
+        }
 
         // After the group negotiation, we assign the group owner as the file
         // server. The file server is single threaded, single connection server
@@ -243,6 +252,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         private Context context;
         private TextView statusText;
         private InetAddress iNetAddr;
+        private Handler mainHandler;
 
         /**
          * @param context
@@ -252,6 +262,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
             this.context = context;
             this.statusText = (TextView) statusText;
             this.iNetAddr = iNetAddr;
+            mainHandler = new Handler(Looper.getMainLooper());
         }
 
         @Override
@@ -261,10 +272,13 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
 
                 Log.d(LOG_TAG, "Server: Socket opened");
 
-                statusText.setText("Server: Socket opened");
+                mainHandler.post(() -> {
+                    statusText.setText("Server: Socket opened");
+                });
                 Socket client = serverSocket.accept();
+
                 Log.d(LOG_TAG, "Server: connection done");
-                (new Handler(Looper.getMainLooper())).post(() -> {
+                mainHandler.post(() -> {
                     statusText.setText("Server: connection done");
                 });
                 final File f = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + "/"

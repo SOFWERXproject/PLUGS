@@ -208,8 +208,9 @@ public class PlugsSensorManager {
 
                 data.order(ByteOrder.LITTLE_ENDIAN);
                 for (PlugsSensorEventListenerCallback listenerCallback : wrapper.listeners) {
-                    PlugsSensorEventListener listener = listenerCallback.listenerRef.get();
-                    listener.onPlugsSensorEvent(event);
+                    listenerCallback.handler.post(() -> {
+                        listenerCallback.listenerRef.get().onPlugsSensorEvent(event);
+                    });
                 }
             }
 

@@ -20,7 +20,7 @@ public class DebugMenuActivity extends AppCompatActivity{
     }
 
     public void gotoDebugMesh(View view) {
-        Intent intent = new Intent(this, WiFiDirectActivity.class);
+        Intent intent = new Intent(this, MeshDebugActivity.class);
         startActivity(intent);
     }
 

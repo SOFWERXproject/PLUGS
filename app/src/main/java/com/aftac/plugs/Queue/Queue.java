@@ -12,6 +12,7 @@ import android.os.Message;
 import android.util.Log;
 import android.util.SparseArray;
 
+import com.aftac.plugs.MeshNetwork.MeshManager;
 import com.aftac.plugs.Sensors.PlugsSensorManager;
 
 import org.json.JSONArray;
@@ -55,9 +56,12 @@ public class Queue extends Service {
 
     private static Queue me;
 
+    private static String name = "Plugs-";
     private static int myId = 1;
     volatile private static Boolean running = false;
 
+
+    public static String getName() { return name; }
 
     public static abstract class QueueItem implements Serializable {
         int getType() { return ITEM_TYPE_NONE; }
@@ -166,11 +170,14 @@ public class Queue extends Service {
     private void init() {
         PlugsSensorManager.init(this.getBaseContext());
 
+        int id = (int) (Math.random() * Integer.MAX_VALUE);
+        name += Integer.toHexString(id & 0xFFFF);
+
         // Populate the command lists in the work thread
         workHandler.post(() -> {
             miscCommands = getQueueCommands(this.getClass());
             sensorCommands = getQueueCommands(PlugsSensorManager.class);
-            //meshCommands = getQueueCommands(MeshManager.class);
+            meshCommands = getQueueCommands(MeshManager.class);
 
             if (startListener != null) mainHandler.post(() -> startListener.onQueueStarted());
         });

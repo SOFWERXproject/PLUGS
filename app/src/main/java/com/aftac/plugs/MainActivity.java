@@ -9,20 +9,21 @@ import android.os.Bundle;
 
 import com.aftac.Plugs;
 import com.aftac.plugs.DebugActivities.DebugMenuActivity;
+import com.aftac.plugs.MeshNetwork.MeshManager;
 import com.aftac.plugs.Queue.Queue;
 
 import android.view.View;
 
 public class MainActivity extends AppCompatActivity {
+    public boolean permissionsChecked = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Intent queueIntent = new Intent(this.getBaseContext(), Queue.class);
-        checkPermissions();
-        startService(queueIntent);
+        // Perform app initialization
+        doInitialization();
     }
 
     @Override
@@ -53,10 +54,20 @@ public class MainActivity extends AppCompatActivity {
         startActivity(intent);
     }
 
+    private void doInitialization() {
+        if (!permissionsChecked)
+            checkPermissions();
+        else {
+            startService(new Intent(this, Queue.class));
+            MeshManager.init(this);
+        }
+    }
+
     private void checkPermissions() {
-        int permissionsMissing = 0;
+        long permissionsMissing = 0;
         int i = Plugs.permissionsNeeded.length,
                 count = 0;
+
         while (--i >= 0) {
             permissionsMissing <<= 1;
             if (ContextCompat.checkSelfPermission(this, Plugs.permissionsNeeded[i]) !=
@@ -65,6 +76,8 @@ public class MainActivity extends AppCompatActivity {
                 count++;
             }
         }
+
+        permissionsChecked = true;
 
         if (permissionsMissing > 0) {
             String[] permissions = new String[count];
@@ -78,6 +91,12 @@ public class MainActivity extends AppCompatActivity {
             }
 
             ActivityCompat.requestPermissions(this, permissions, 1);
-        }
+        } else
+            doInitialization();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        doInitialization();
     }
 }

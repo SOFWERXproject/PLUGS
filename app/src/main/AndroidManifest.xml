@@ -1,58 +1,62 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-package="com.aftac.plugs">
+    package="com.aftac.plugs">
 
-<uses-permission android:name="android.permission.BLUETOOTH" />
-<uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
-<uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-<uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
-<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-<uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
-<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-<uses-permission android:name="android.permission.INTERNET"/>
-<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
-<uses-feature android:name="android.hardware.wifi.direct" android:required="true" />
+    <uses-feature
+        android:name="android.hardware.wifi.direct"
+        android:required="true" />
 
-<application
-    android:allowBackup="true"
-    android:icon="@mipmap/plugs_icon"
-    android:label="@string/app_name"
-    android:roundIcon="@mipmap/plugs_icon"
-    android:supportsRtl="true"
-    android:theme="@style/Theme.AppCompat.NoActionBar">
-    <activity android:name=".MainActivity">
-        <intent-filter>
-            <action android:name="android.intent.action.MAIN" />
-
-            <category android:name="android.intent.category.LAUNCHER" />
-        </intent-filter>
-    </activity>
-
-    <activity android:name=".DebugActivities.DebugMenuActivity" />
-    <activity android:name=".DebugActivities.MeshDebugActivity"
-        android:theme="@style/Theme.AppCompat.Light.NoActionBar"/>
-    <activity android:name=".MeshNetwork.WiFiDirectActivity"
-        android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
-    <activity android:name=".DebugActivities.QueueDebugActivity"
-        android:theme="@style/Theme.AppCompat.Light.NoActionBar"/>
-
-    <activity android:name=".ConfigurationActivity" />
-    <activity android:name=".DeployActivity" />
-
-    <service
-        android:name=".Queue.Queue"
-        android:enabled="true"
-        android:exported="false"
+    <application
+        android:allowBackup="true"
         android:icon="@mipmap/plugs_icon"
-        android:label="Queue" />
-    <service android:enabled="true" android:name=".MeshNetwork.FileTransferService" />
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/plugs_icon"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.AppCompat.NoActionBar">
+        <activity android:name=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
 
-    <activity android:name=".TriggersActivity" />
-    <activity android:name=".ActionsActivity" />
-    <activity android:name=".HomeStationActivity" />
-    <activity android:name=".GeneralActivity" />
-</application>
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".DebugActivities.DebugMenuActivity" />
+        <activity
+            android:name=".DebugActivities.MeshDebugActivity" />
+        <activity
+            android:name=".MeshNetwork.WiFiDirectActivity"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
+        <activity
+            android:name=".DebugActivities.QueueDebugActivity"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
+        <activity android:name=".ConfigurationActivity" />
+        <activity android:name=".DeployActivity" />
+
+        <service
+            android:name=".Queue.Queue"
+            android:enabled="true"
+            android:exported="false"
+            android:icon="@mipmap/plugs_icon"
+            android:label="Queue" />
+        <service
+            android:name=".MeshNetwork.FileTransferService"
+            android:enabled="true" />
+
+        <activity android:name=".TriggersActivity" />
+        <activity android:name=".ActionsActivity" />
+        <activity android:name=".HomeStationActivity" />
+        <activity android:name=".GeneralActivity" />
+    </application>
 
 </manifest>
