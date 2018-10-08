@@ -75,10 +75,9 @@ public class Queue extends Service {
     public static class Command extends QueueItem {
         @Override
         int getType() { return ITEM_TYPE_COMMAND; }
-        int queueItemType = ITEM_TYPE_COMMAND;
-        int commandClass = -1;
-        int targetId = COMMAND_TARGET_NONE;
-        int commandId = -1;
+        int commandClass;
+        int targetId;
+        int commandId;
         JSONArray args;
         CommandResponseListener responseListener = null;
         Handler  responseHandler = workHandler;
@@ -97,7 +96,11 @@ public class Queue extends Service {
                 ByteBuffer sliced = buf.slice();
                 byte[] bytes = new byte[sliced.remaining()];
                 sliced.get(bytes);
-                args = new JSONArray(new String(buf.slice().array(), "UTF-8"));
+                String strJSON = new String(bytes, "UTF-8");
+                Log.v(LOG_TAG, "Command parsed: " + targetId + ", " + commandClass + ", "
+                            + "commandId");
+                Log.v(LOG_TAG, strJSON);
+                args = new JSONArray(strJSON);
             } catch (Exception e) { e.printStackTrace(); }
         }
 
@@ -114,7 +117,7 @@ public class Queue extends Service {
             ret.put((byte)0);
 
             return ret.array();
-        };
+        }
 
         // A handler can be set for the responseListener, or just make one for the calling thread
         public void setResponseListener(CommandResponseListener listener, Handler handler) {
@@ -133,7 +136,7 @@ public class Queue extends Service {
         @Override
         int getType() { return ITEM_TYPE_TRIGGER; }
 
-        abstract void Trigger(ByteBuffer buf);
+        //abstract void Trigger(ByteBuffer buf);
     }
 
     private static onStartedListener startListener = null;

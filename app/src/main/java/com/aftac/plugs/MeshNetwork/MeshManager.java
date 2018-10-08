@@ -188,24 +188,28 @@ public class MeshManager {
         if (device != null) {
             if (!inMeshGroup(deviceId)) {
                 myMeshGroup.add(device);
-                device.newInGroup = true;
                 if (device.isConnected) {
                     // Send current mesh group members to new member
-                    if (commandSource == DEVICE_SELF)
+                    if (commandSource.equals(DEVICE_SELF))
                         connectToMeshGroup(deviceId);
-                } else
+                } else {
                     connectTo(deviceId);
-            } else
+                    device.newInGroup = true;
+                }
+            } else {
+                if (!device.isConnected() && !device.isConnecting())
+                    connectTo(deviceId);
                 return;
+            }
         } else {
             device = new MeshDevice(deviceId, "");
             device.newInGroup = true;
             myMeshGroup.add(device);
         }
 
-        if (commandSource == DEVICE_SELF) {
-
-        }
+        //if (commandSource == DEVICE_SELF) {
+        //
+        //}
 
 
         // The following assumes source is DEVICE_SELF
@@ -399,6 +403,9 @@ public class MeshManager {
                 while ((chr = buf.get()) !=0){ srcId += (char)chr; }
             }
 
+            Log.v(LOG_TAG, "Payload: " + headerLength + ", " + serial + ", " + contentType
+                        + ", " + destId + ", " + srcId);
+
             if (serial != device.serialRx++) {
                 Log.v(LOG_TAG, "WARNING " + deviceId + ": Serial value jump ("
                             + device.serialRx + ", " + serial + ")");
@@ -411,8 +418,9 @@ public class MeshManager {
                     int     headerLength
                     int     serial
                     int     contentType
-                            sourceDeviceId
                             destinationDeviceId
+                            sourceDeviceId
+
 
              */
             switch (contentType) {
