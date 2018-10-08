@@ -25,7 +25,7 @@ public class DeployActivity extends AppCompatActivity {
 
     //Start the timer
     void startTimer() {
-        cTimer = new CountDownTimer(30000, 1000) {
+        cTimer = new CountDownTimer(counterSetting * 1000, 1000) {
             public void onTick(long millisUntilFinished) {
                 timerText.setText(Long.toString(millisUntilFinished / 1000));
             }
@@ -40,7 +40,7 @@ public class DeployActivity extends AppCompatActivity {
     //Cancel the timer
     void cancelTimer(){
         if(cTimer != null) {
-            timerText.setText(counterSetting);
+            timerText.setText(Integer.toString(counterSetting));
             cTimer.cancel();
         }
     }
