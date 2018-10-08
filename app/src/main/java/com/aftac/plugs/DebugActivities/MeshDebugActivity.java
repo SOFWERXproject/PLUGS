@@ -5,7 +5,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -14,6 +13,7 @@ import android.widget.TextView;
 
 import com.aftac.plugs.MeshNetwork.MeshManager;
 import com.aftac.plugs.MeshNetwork.MeshDevice;
+import com.aftac.plugs.Queue.Queue;
 import com.aftac.plugs.R;
 
 import java.util.List;
@@ -31,7 +31,7 @@ public class MeshDebugActivity extends AppCompatActivity
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_debug_mesh2);
+        setContentView(R.layout.activity_debug_mesh);
 
         peerListView = findViewById(R.id.mesh_peers_list);
         peerListView.setHasFixedSize(true);
@@ -42,9 +42,9 @@ public class MeshDebugActivity extends AppCompatActivity
         peerListView.setAdapter(peerListAdapter);
 
         txtStatus = findViewById(R.id.txt_mesh_status);
+        TextView txtLocalName = findViewById(R.id.txt_mesh_local_name);
+        txtLocalName.setText(Queue.getName());
 
-        Toolbar toolbar = findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
 
         if (!MeshManager.isEnabled())
             MeshManager.init(getBaseContext());
@@ -114,7 +114,7 @@ public class MeshDebugActivity extends AppCompatActivity
         @Override
         public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
             LayoutInflater inflater = LayoutInflater.from(parent.getContext());
-            View v = inflater.inflate(R.layout.activity_debug_mesh_row_devices, parent, false);
+            View v = inflater.inflate(R.layout.activity_mesh_device_row, parent, false);
 
             return new PeerViewHolder(v);
         }

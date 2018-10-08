@@ -6,7 +6,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.TextView;
 
-import com.aftac.plugs.MeshNetwork.WiFiDirectActivity;
 import com.aftac.plugs.R;
 
 public class DebugMenuActivity extends AppCompatActivity{
