@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent">
+
+    <include layout="@layout/toolbar" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:id="@+id/linearLayout1"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:layout_margin="8sp">
+
+        <fragment
+            android:id="@+id/frag_list"
+            class="com.aftac.plugs.MeshNetwork.DeviceListFragment"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="2">
+            <!-- Preview: layouts=@layouts/row_devices -->
+        </fragment>
+
+        <fragment
+            android:id="@+id/frag_detail"
+            class="com.aftac.plugs.MeshNetwork.DeviceDetailFragment"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+            <!-- Preview: layouts=@layouts/device_detail -->
+        </fragment>
+    </LinearLayout>
+</LinearLayout>
