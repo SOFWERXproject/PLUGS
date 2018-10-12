@@ -22,8 +22,7 @@ android {
     }
     sourceSets {
         main { res.srcDirs = [
-                'src/main/res/layouts/debug',
-                'src/main/res/layouts',
+                'src/main/res/layout',
                 'src/main/res',
                 'src/main/res/menu'
         ] }

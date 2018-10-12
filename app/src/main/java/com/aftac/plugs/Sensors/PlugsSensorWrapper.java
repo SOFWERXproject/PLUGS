@@ -88,11 +88,17 @@ class PlugsSensorWrapper implements SensorEventListener {
             */
         
         // Create a byte array to hold the sensor event data
-        byte[] data = new byte[
-                                    Integer.BYTES * 3
-                                  + Long.BYTES * 2
-                                  + Float.BYTES * event.values.length];
-        
+        byte[] data;
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+            data = new byte[Integer.BYTES * 3
+                          + Long.BYTES    * 2
+                          + Float.BYTES   * event.values.length];
+        } else {
+            data = new byte[  4 * 3                     // sizeof(int) * 3
+                            + 8 * 2                     // sizeof(long) * 2
+                            + 4 * event.values.length]; // sizeof(float) * event.values.length
+        }
+
         // Create a ByteBuffer to hold the sensor event data
         ByteBuffer buf = ByteBuffer.wrap(data);
         buf.order(ByteOrder.LITTLE_ENDIAN);

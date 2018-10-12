@@ -1,6 +1,5 @@
 package com.aftac.plugs.MeshNetwork;
 
-import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.IntentFilter;
 import android.os.Handler;
@@ -32,8 +31,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
-import static android.os.Looper.getMainLooper;
 
 public class MeshManager {
     private static final String LOG_TAG = MeshManager.class.getSimpleName();
@@ -409,7 +406,7 @@ public class MeshManager {
             if (serial != device.serialRx++) {
                 Log.v(LOG_TAG, "WARNING " + deviceId + ": Serial value jump ("
                             + device.serialRx + ", " + serial + ")");
-                device.serialRx = serial++;
+                device.serialRx = ++serial;
             } else
                 device.serialRx++;
 
@@ -484,7 +481,7 @@ public class MeshManager {
         //Payload payload = Payload.fromFile(file);
     }
     public static void sendBytes(String destinationId, byte[] inBuf) {
-        if (destinationId == DEVICE_ALL) {
+        if (destinationId.equals(DEVICE_ALL)) {
             // TODO: Send payload to all in mesh group
         } else {
             MeshDevice device = getDevice(destinationId);

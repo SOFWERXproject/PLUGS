@@ -26,7 +26,7 @@ public class PlugsSensorManager {
     private static int LIST_INITIAL_SIZE = 5;
     private static int LIST_GROW_SIZE = 5;
 
-    static int STANDARD_ANDROID_SENSOR_MASK = 0x80000000;
+    static final int STANDARD_ANDROID_SENSOR_MASK = 0x80000000;
 
     private static String className = PlugsSensorManager.class.getName();
     private static SensorManager sensorManager = null;
@@ -62,7 +62,7 @@ public class PlugsSensorManager {
     }
 
     @Queue.addCommand(COMMAND_GET_SENSORS)
-    static public JSONArray getSensors(int type, String test) {
+    public static JSONArray getSensors(int type, String test) {
         Log.v(LOG_TAG, "Test string: " + test);
         List<Sensor> list = sensorManager.getSensorList(type);
         JSONArray ret = new JSONArray();
@@ -73,7 +73,7 @@ public class PlugsSensorManager {
     }
 
     // Creates a listener for a sensor, and returns an id to reference it by later
-    public int initSensor(int type, int index) {
+    public static int initSensor(int type, int index) {
         Sensor sensor = null;
         List<Sensor> list = sensorManager.getSensorList(type);
 
@@ -81,37 +81,37 @@ public class PlugsSensorManager {
             return -1;
         else return createSensorListener(list.get(index));
     }
-    public int initSensor(int type) {
+    public static int initSensor(int type) {
         return createSensorListener(sensorManager.getDefaultSensor(type));
     }
 
     // Start reading data from a sensor
-    public boolean startSensor(int id) {
+    public static boolean startSensor(int id) {
         if (id >= sensorWrappers.length) return false;
         PlugsSensorWrapper wrapper = sensorWrappers[id];
         synchronized (wrapper) { return sensorWrappers[id].start(); }
     }
 
     // Stop reading data from a sensor
-    public void stopSensor(int id) {
+    public static void stopSensor(int id) {
         if (id >= sensorWrappers.length) return;
         PlugsSensorWrapper wrapper = sensorWrappers[id];
         synchronized (wrapper) { sensorWrappers[id].stop(); }
     }
 
     // Free a sensor wrapper
-    public void freeSensor(int id) {
+    public static void freeSensor(int id) {
         if (id >= sensorWrappers.length) return;
         PlugsSensorWrapper wrapper = sensorWrappers[id];
         synchronized (wrapper) { sensorWrappers[id].free(); }
     }
 
-    public boolean isSensorRunning(int id) {
-        return ((id < sensorWrappers.length) ? sensorWrappers[id].isRunning() : false);
+    public static boolean isSensorRunning(int id) {
+        return ((id < sensorWrappers.length) && sensorWrappers[id].isRunning());
     }
 
     // Add a listener to a plugs sensor's data events
-    public void addSensorEventListener(int sensorId, PlugsSensorEventListener listener,
+    public static void addSensorEventListener(int sensorId, PlugsSensorEventListener listener,
                                       Handler handler) {
         if (sensorId < sensorWrappers.length) {
             PlugsSensorWrapper wrapper = sensorWrappers[sensorId];
@@ -123,12 +123,12 @@ public class PlugsSensorManager {
             } }
         }
     }
-    public void addSensorEventListener(int sensorId, PlugsSensorEventListener listener) {
+    public static void addSensorEventListener(int sensorId, PlugsSensorEventListener listener) {
         addSensorEventListener(sensorId, listener, new Handler(Looper.myLooper()));
     }
 
     // Remove a data event listener from a plug sensor
-    public void removeSensorEventListener(int sensorId, PlugsSensorEventListener listener) {
+    public static void removeSensorEventListener(int sensorId, PlugsSensorEventListener listener) {
         if (sensorId < sensorWrappers.length) {
             PlugsSensorWrapper wrapper = sensorWrappers[sensorId];
             synchronized (wrapper.listeners) {
@@ -140,17 +140,17 @@ public class PlugsSensorManager {
 
     // Privates
 
-    class PlugsSensorEventListenerCallback {
+    static class PlugsSensorEventListenerCallback {
         WeakReference<PlugsSensorEventListener> listenerRef;
         Handler handler;
         PlugsSensorEventListenerCallback(PlugsSensorEventListener listener, Handler handler) {
-            this.listenerRef = new WeakReference(listener);
+            this.listenerRef = new WeakReference<>(listener);
             this.handler = handler;
         }
     }
 
     // Creates a sensor listener, and returns it's id
-    private int createSensorListener(Sensor sensor) {
+    private static int createSensorListener(Sensor sensor) {
         int i, sensorId = -1;
         // If the sensorWrappers array doesn't exist yet, create it
         if (sensorWrappers == null) {
@@ -208,9 +208,8 @@ public class PlugsSensorManager {
 
                 data.order(ByteOrder.LITTLE_ENDIAN);
                 for (PlugsSensorEventListenerCallback listenerCallback : wrapper.listeners) {
-                    listenerCallback.handler.post(() -> {
-                        listenerCallback.listenerRef.get().onPlugsSensorEvent(event);
-                    });
+                    listenerCallback.handler.post(() ->
+                                listenerCallback.listenerRef.get().onPlugsSensorEvent(event));
                 }
             }
 
