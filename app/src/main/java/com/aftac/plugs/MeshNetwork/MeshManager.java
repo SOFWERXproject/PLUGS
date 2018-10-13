@@ -8,6 +8,7 @@ import android.util.Log;
 
 import com.aftac.plugs.Queue.Queue;
 
+import com.aftac.plugs.Queue.QueueCommand;
 import com.google.android.gms.nearby.Nearby;
 import com.google.android.gms.nearby.connection.AdvertisingOptions;
 import com.google.android.gms.nearby.connection.ConnectionInfo;
@@ -25,7 +26,6 @@ import com.google.android.gms.nearby.connection.Strategy;
 
 import org.json.JSONArray;
 
-import java.io.File;
 import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -53,8 +53,8 @@ public class MeshManager {
     public static final int CONTENT_COMMAND    = 0x100;
     public static final int CONTENT_TRIGGER    = 0x101;
 
-    public static final String DEVICE_SELF = "%SELF%";
-    public static final String DEVICE_ALL  = "%ALL%";
+    public static final String DEVICE_SELF = Queue.COMMAND_TARGET_SELF;//"%SELF%";
+    public static final String DEVICE_ALL  = Queue.COMMAND_TARGET_ALL;//"%ALL%";
 
     public static final int STATE_ENABLED_FLAG    = 0x0001;
     public static final int STATE_LISTENING_FLAG  = 0x0002;
@@ -89,7 +89,7 @@ public class MeshManager {
     private static boolean hasError = false;
     private static int lastError = ERROR_NONE;
     private static int lastErrorCode = 0;
-    private static String myDeviceId;
+    private static String myDeviceId = "";
 
     private static boolean isListening = false;
     private static boolean isEnabled = false;
@@ -127,7 +127,7 @@ public class MeshManager {
     public static String getMyDeviceId() { return myDeviceId;  }
 
     // Starts advertising & searching for peers
-    @Queue.addCommand(COMMAND_START_DISCOVERY)
+    @Queue.Command(COMMAND_START_DISCOVERY)
     public static void startPeerDiscovery() {
         connectionsClient.startAdvertising(
                     Queue.getName(),
@@ -164,7 +164,7 @@ public class MeshManager {
     }
 
     // Stops advertising & searching for peers
-    @Queue.addCommand(COMMAND_STOP_DISCOVERY)
+    @Queue.Command(COMMAND_STOP_DISCOVERY)
     public static void stopPeerDiscovery() {
         connectionsClient.stopAdvertising();
         connectionsClient.stopDiscovery();
@@ -176,7 +176,7 @@ public class MeshManager {
         onStatusChanged(STATE_LISTENING_CHANGED_FLAG);
     }
 
-    @Queue.addCommand(COMMAND_ADD_TO_MESH_GROUP)
+    @Queue.Command(COMMAND_ADD_TO_MESH_GROUP)
     public static void addToMeshGroup(String deviceId, String commandSource) {
         // TODO: addToMeshGroup
         MeshDevice device = getDevice(deviceId);
@@ -238,17 +238,17 @@ public class MeshManager {
 
             Log.v(LOG_TAG, "Connecting " + deviceId + " to " + addDevice.id);
 
-            Object[] args = {addDevice.id, myDeviceId};
-            Queue.Command command = new Queue.Command(
-                    Queue.COMMAND_TARGET_SELF,
+            Object[] args = {addDevice.id, addDevice.id};
+            QueueCommand cmd = new QueueCommand(
+                    deviceId,
                     Queue.COMMAND_CLASS_MESH_NET,
                     MeshManager.COMMAND_ADD_TO_MESH_GROUP,
                     new JSONArray(Arrays.asList(args)));
-            sendBytes(deviceId, command.toBytes());
+            Queue.push(cmd);
         }
     }
 
-    @Queue.addCommand(COMMAND_REMOVE_FROM_MESH_GROUP)
+    @Queue.Command(COMMAND_REMOVE_FROM_MESH_GROUP)
     public static void removeFromMeshGroup(String deviceId, String commandSource) {
         // TODO: removeFromMeshGroup
 
@@ -339,20 +339,14 @@ public class MeshManager {
                         addToMeshGroup(deviceId);
 
                     MeshDevice device = getDevice(deviceId);
-
-                    ByteBuffer buf = ByteBuffer.wrap(new byte[headerLength]);
-                    buf.putInt(headerLength);
-                    buf.putInt(device.serialTx++);
-                    buf.putInt(CONTENT_HELLO);
-                    buf.put(deviceId.getBytes());
-                    buf.put((byte)0);
+                    device.serialRx = 0;
+                    device.serialTx = 0;
+                    send(device.id, CONTENT_HELLO, null);
 
                     if (device.newInGroup) {
                         device.newInGroup = false;
                         connectToMeshGroup(deviceId);
                     }
-
-                    connectionsClient.sendPayload(deviceId, Payload.fromBytes(buf.array()));
                 break;
                 case ConnectionsStatusCodes.STATUS_CONNECTION_REJECTED:
                     Log.d(LOG_TAG, "Connection rejected - " + deviceId);
@@ -381,50 +375,69 @@ public class MeshManager {
     private static PayloadCallback payloadCallback = new PayloadCallback() {
         @Override
         public void onPayloadReceived(String deviceId, Payload payload) {
-            Log.d(LOG_TAG, "Payload received:" + deviceId);
-            // TODO: handle payloads
+            if (payload.getType() == Payload.Type.BYTES) {
+                processPayload(deviceId, payload);
+                return;
+            }
+            // TODO: track payload progress
+        }
+
+        @Override
+        public void onPayloadTransferUpdate(String deviceId,
+                                            PayloadTransferUpdate update) {
+            switch (update.getStatus()) {
+                case PayloadTransferUpdate.Status.IN_PROGRESS:
+                    // TODO: payload in progress
+                    break;
+                case PayloadTransferUpdate.Status.SUCCESS:
+                    // TODO: payload success
+                    // processPayload(deviceId, payload);
+                    break;
+                case PayloadTransferUpdate.Status.FAILURE:
+                    // TODO: payload failure
+                    break;
+            }
+        }
+
+        private void processPayload(String deviceId, Payload payload) {
+            Log.d(LOG_TAG, "Payload received: " + deviceId);
             MeshDevice device = getDevice(deviceId);
 
             ByteBuffer buf = ByteBuffer.wrap(payload.asBytes());
-
-            byte chr;
-            int headerLength = buf.getInt();
-            int serial       = buf.getInt();
-            int contentType  = buf.getInt();
-
-            String destId = "";
-            while ((chr = buf.get()) != 0) { destId += (char)chr; }
-
-            String srcId = "";
-            if (contentType != CONTENT_HELLO) {
-                while ((chr = buf.get()) !=0){ srcId += (char)chr; }
-            }
-
-            Log.v(LOG_TAG, "Payload: " + headerLength + ", " + serial + ", " + contentType
-                        + ", " + destId + ", " + srcId);
-
-            if (serial != device.serialRx++) {
-                Log.v(LOG_TAG, "WARNING " + deviceId + ": Serial value jump ("
-                            + device.serialRx + ", " + serial + ")");
-                device.serialRx = ++serial;
-            } else
-                device.serialRx++;
 
             /*
                 Header
                     int     headerLength
                     int     serial
                     int     contentType
-                            destinationDeviceId
-                            sourceDeviceId
-
-
+                    String  sourceDeviceId
+                    String  destinationDeviceId
              */
+            int headerLength = buf.getInt();
+            int serial       = buf.getInt();
+            int contentType  = buf.getInt();
+            byte chr;
+            String srcId = "";  while ((chr = buf.get()) !=0)  {  srcId += (char)chr; }
+            String destId = ""; while ((chr = buf.get()) != 0) { destId += (char)chr; }
+
+
+            Log.v(LOG_TAG, "Payload: " + headerLength + ", " + serial + ", " + contentType
+                    + ", " + destId + ", " + srcId);
+
+            if (serial != device.serialRx++) {
+                Log.v(LOG_TAG, "WARNING " + deviceId + ": Serial value jump ("
+                        + device.serialRx + ", " + serial + ")");
+                device.serialRx = ++serial;
+            }
+            if (!srcId.equals("") && srcId.equals(deviceId))
+                Log.v(LOG_TAG, "WARNING: Device Id mismatch (" + deviceId + ", " + srcId + ")");
+
+
             switch (contentType) {
                 case CONTENT_HELLO:
-                    if (myDeviceId != null && !myDeviceId.equals(destId)) {
+                    if (!myDeviceId.equals("") && !myDeviceId.equals(destId)) {
                         Log.v(LOG_TAG, "WARNING " + deviceId + ": device ID mismatch ("
-                                    + myDeviceId + ", " + destId + ")");
+                                + myDeviceId + ", " + destId + ")");
                     }
                     myDeviceId = destId;
                     onStatusChanged(STATE_DEVICE_ID_CHANGED_FLAG);
@@ -449,7 +462,7 @@ public class MeshManager {
 
 
                 case CONTENT_COMMAND:
-                    Queue.Command command = new Queue.Command(buf.slice());
+                    QueueCommand command = new QueueCommand(buf.slice());
                     Queue.push(command);
                 break;
                 case CONTENT_TRIGGER:
@@ -464,38 +477,26 @@ public class MeshManager {
                 // case CONTENT_OTHER:
             }
         }
-
-        @Override
-        public void onPayloadTransferUpdate(String endpointName, PayloadTransferUpdate payloadTransferUpdate) {
-
-        }
     };
 
-    // TODO: Confirmations? Redundancy for mesh group?
-    public static void sendBytes(List<String> destinationIds, byte[] inBuf) {
-
-        //ByteBuffer buf = ByteBuffer.allocate(inBuf.length + header.length);
-        //connectionsClient.sendPayload(destinationIds, payload);
-    }
-    public static void sendFile(List<String> destinationIds, File file) {
-        //Payload payload = Payload.fromFile(file);
-    }
-    public static void sendBytes(String destinationId, byte[] inBuf) {
-        if (destinationId.equals(DEVICE_ALL)) {
+    public static void send(String destinationId, int contentType, byte[] data) {
+        if (destinationId == DEVICE_ALL) {
             // TODO: Send payload to all in mesh group
         } else {
+            Log.v(LOG_TAG, "Sending: " + destinationId + ", " + contentType);
             MeshDevice device = getDevice(destinationId);
             int headerLength = 12 + destinationId.length() + myDeviceId.length() + 2;
-            ByteBuffer buf = ByteBuffer.wrap(
-                        new byte[inBuf.length + headerLength]);
+            int length = headerLength;
+            if (data != null)
+                length += data.length;
+            ByteBuffer buf = ByteBuffer.wrap(new byte[length]);
             buf.putInt(headerLength);
             buf.putInt(device.serialTx++);
-            buf.putInt(CONTENT_COMMAND);
-            buf.put(destinationId.getBytes());
-            buf.put((byte)0);
-            buf.put(myDeviceId.getBytes());
-            buf.put((byte)0);
-            buf.put(inBuf);
+            buf.putInt(contentType);
+            buf.put(myDeviceId.getBytes()); buf.put((byte)0);
+            buf.put(destinationId.getBytes()); buf.put((byte)0);
+            if (data != null)
+                buf.put(data);
 
             connectionsClient.sendPayload(destinationId, Payload.fromBytes(buf.array()));
         }

@@ -7,12 +7,12 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
-import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
 import android.util.SparseArray;
 
 import com.aftac.plugs.MeshNetwork.MeshManager;
+import com.aftac.plugs.MeshNetwork.MeshManager.MeshStatusChangedListener;
 import com.aftac.plugs.Sensors.PlugsSensorManager;
 
 import org.json.JSONArray;
@@ -20,37 +20,38 @@ import org.json.JSONObject;
 
 import java.io.Serializable;
 import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
+
+import static com.aftac.plugs.Queue.Queue.COMMAND_MISC_STOP_QUEUE;
 
 public class Queue extends Service {
-    private static final String LOG_TAG =  Queue.class.getSimpleName();
+    static final String LOG_TAG =  Queue.class.getSimpleName();
 
-    public static final int COMMAND_TARGET_NONE = 0x00000000;
-    public static final int COMMAND_TARGET_SELF = 0xFFFFFFFE;
-    public static final int COMMAND_TARGET_ALL =  0xFFFFFFFF;
+    public static final String COMMAND_TARGET_NONE = "%NONE%";
+    public static final String COMMAND_TARGET_SELF = "%SELF%";
+    public static final String COMMAND_TARGET_ALL =  "%ALL%";
 
-    public final static int COMMAND_CLASS_MISC = 0;
-    public final static int COMMAND_CLASS_SENSORS = 1;
-    public final static int COMMAND_CLASS_TRIGGERS = 2;
-    public final static int COMMAND_CLASS_MESH_NET = 3;
-    public final static int COMMAND_CLASS_BASE_COM = 4;
+    public final static int COMMAND_CLASS_MISC      = 0;
+    public final static int COMMAND_CLASS_SENSORS   = 1;
+    public final static int COMMAND_CLASS_TRIGGERS  = 2;
+    public final static int COMMAND_CLASS_MESH_NET  = 3;
+    public final static int COMMAND_CLASS_BASE_COMM = 4;
 
-    public static final int COMMAND_MISC_STOP = 1;
+    public static final int COMMAND_MISC_STOP_QUEUE = 1;
 
-    private static final int ITEM_TYPE_NONE = 0;
-    private static final int ITEM_TYPE_COMMAND = 1;
-    private static final int ITEM_TYPE_TRIGGER = 2;
+    static final int ITEM_TYPE_NONE = 0;
+    static final int ITEM_TYPE_COMMAND = 1;
+    static final int ITEM_TYPE_TRIGGER = 2;
 
-    private static Handler mainHandler;
-    private static Handler workHandler;
     private static HandlerThread workThread;
+    static Handler mainHandler;
+    static Handler workHandler;
 
     private static SparseArray<Method> miscCommands;
     private static SparseArray<Method> sensorCommands;
@@ -58,95 +59,31 @@ public class Queue extends Service {
 
     private static Queue me;
 
-    private static String name = "Plugs-";
-    private static int myId = 1;
+    private static String myName = "Plugs-";
+    private static String myId = "";
     volatile private static Boolean running = false;
     private static boolean initialized = false;
 
 
-    public static String getName() { return name; }
+    public static String setName(String name) { return myName = name; }
+    public static String getName() { return myName; }
+    public static String getId() { return myId; }
 
-    public static abstract class QueueItem implements Serializable {
-        int getType() { return ITEM_TYPE_NONE; }
+
+    static abstract class QueueItem implements Serializable{
+        abstract int getType();
         long timestamp;
-        int sourceId = myId;
+        String sourceId = myId;
     }
 
-    public static class Command extends QueueItem {
-        @Override
-        int getType() { return ITEM_TYPE_COMMAND; }
-        int commandClass;
-        int targetId;
-        int commandId;
-        JSONArray args;
-        CommandResponseListener responseListener = null;
-        Handler  responseHandler = workHandler;
 
-        public Command(int targetId, int commandClass, int commandId, JSONArray args) {
-            this.commandClass = commandClass;
-            this.targetId  = targetId;
-            this.commandId = commandId;
-            this.args = args;
-        }
-        public Command(ByteBuffer buf) {
-            targetId     = buf.getInt();
-            commandClass = buf.getInt();
-            commandId    = buf.getInt();
-            try {
-                ByteBuffer sliced = buf.slice();
-                byte[] bytes = new byte[sliced.remaining()];
-                sliced.get(bytes);
-                String strJSON = new String(bytes, "UTF-8");
-                Log.v(LOG_TAG, "Command parsed: " + targetId + ", " + commandClass + ", "
-                            + "commandId");
-                Log.v(LOG_TAG, strJSON);
-                args = new JSONArray(strJSON);
-            } catch (Exception e) { e.printStackTrace(); }
-        }
-
-        public byte[] toBytes() {
-            ByteBuffer ret;
-
-            String argStr = args.toString();
-            ret = ByteBuffer.wrap(new byte[12 + argStr.length() + 1]);
-
-            ret.putInt(targetId);
-            ret.putInt(commandClass);
-            ret.putInt(commandId);
-            ret.put(argStr.getBytes());
-            ret.put((byte)0);
-
-            return ret.array();
-        }
-
-        // A handler can be set for the responseListener, or just make one for the calling thread
-        public void setResponseListener(CommandResponseListener listener, Handler handler) {
-            responseListener = listener;
-            responseHandler  = handler;
-        }
-        public void setResponseListener(CommandResponseListener listener) {
-            setResponseListener(listener, new Handler(Looper.myLooper()));
-        }
-    }
-    public interface CommandResponseListener {
-        void onCommandResponse(Object response, Command cmd);
-    }
-
-    public static abstract class Trigger extends QueueItem {
-        @Override
-        int getType() { return ITEM_TYPE_TRIGGER; }
-
-        //abstract void Trigger(ByteBuffer buf);
-    }
-
+    // onStartedListener
     private static onStartedListener startListener = null;
     public interface onStartedListener { void onQueueStarted(); }
     public static void setStartedListener(onStartedListener obj) { startListener = obj; }
 
-
     // No need to bind to the queue service
     @Override public IBinder onBind(Intent intent) { return null; }
-
 
     // Returns true if the queue service is running
     public static boolean isRunning() { return running; }
@@ -206,10 +143,13 @@ public class Queue extends Service {
         Privates
     */
     private void init() {
+        MeshManager.init(this);
         PlugsSensorManager.init(this.getBaseContext());
 
+        MeshManager.addOnStatusChangedListener(deviceIdListener);
+
         int id = (int) (Math.random() * Integer.MAX_VALUE);
-        name += Integer.toHexString(id & 0xFFFF);
+        myName += Integer.toHexString(id & 0xFFFF);
 
         // Populate the command lists in the work thread
         workHandler.post(() -> {
@@ -241,29 +181,41 @@ public class Queue extends Service {
             if (!bundle.containsKey("content")) return false;
 
             QueueItem content = (QueueItem) bundle.getSerializable("content");
-            Log.v(LOG_TAG, "Queue is processing an item (" + content.getType() + ")");
+            Log.v(LOG_TAG, "Queue is processing an item (" + content.getType() + ") " + myId);
 
             switch (content.getType()) {
                 case ITEM_TYPE_COMMAND:
-                    int target = ((Command)content).targetId;
-                    if (target == myId || target == COMMAND_TARGET_SELF
-                            || target == COMMAND_TARGET_ALL) {
+                    QueueCommand cmd = (QueueCommand)content;
+                    String target = cmd.targetId;
+
+                    Log.v(LOG_TAG, cmd.sourceId + ", " + cmd.targetId + ", "
+                                + cmd.commandClass + ", " + cmd.commandId);
+
+                    // Forward commands from local device not targeted at self
+                    if ((!myId.equals("") && cmd.sourceId.equals(myId))
+                            && !(target.equals(COMMAND_TARGET_SELF) || target.equals(myId))) {
+                        MeshManager.send(cmd.targetId, MeshManager.CONTENT_COMMAND, cmd.toBytes());
+                    }
+
+                    // Process commands targeted at the local device
+                    if (target.equals(COMMAND_TARGET_SELF) || target.equals(COMMAND_TARGET_ALL)
+                                || (!myId.equals("") && target.equals(myId))) {
                         Log.v(LOG_TAG, "Queue is processing a command");
-                        try { processCommand((Command) content); }
+                        try { processCommand(cmd); }
                         catch (Exception e) { Log.e(LOG_TAG, "Exception", e); }
                     } else
                         Log.v(LOG_TAG, "Queue ignored a command not targeted at this device");
-                    break;
 
+                break;
                 case ITEM_TYPE_TRIGGER:
-                    processTrigger((Trigger) content);
-                    break;
+                    processTrigger((QueueTrigger) content);
+                break;
             }
             return true;
         }
     };
 
-    private void processTrigger(Trigger trigger) {
+    private void processTrigger(QueueTrigger trigger) {
         // TODO: process triggers
 
         //if (trigger.sourceId == myId) {
@@ -276,7 +228,7 @@ public class Queue extends Service {
     }
 
     // Processes commands sent to the Queue
-    private void processCommand(Command command)
+    private void processCommand(QueueCommand command)
             throws InvocationTargetException, IllegalAccessException {
         SparseArray<Method> list;
         switch (command.commandClass) {
@@ -338,15 +290,26 @@ public class Queue extends Service {
         Log.v(LOG_TAG, "Queue service has stopped");
     }
 
+    MeshStatusChangedListener deviceIdListener = new MeshStatusChangedListener() {
+        @Override
+        public void onMeshStatusChanged(int statusFlags) {
+            if ((statusFlags & MeshManager.STATE_DEVICE_ID_CHANGED_FLAG) > 0) {
+                myId = MeshManager.getMyDeviceId();
+                Log.v(LOG_TAG, "My id is: " + myId);
+                MeshManager.removeOnStatusChangedListener(deviceIdListener);
+            }
+        }
+    };
+
     // Custom annotation to mark queue commands
     @Retention(RetentionPolicy.RUNTIME)
     @Target(ElementType.METHOD)
-    public @interface addCommand {
+    public @interface Command {
         int value();
     }
 
     // Queue command to stop the Queue service
-    @Queue.addCommand(COMMAND_MISC_STOP)
+    @Queue.Command(COMMAND_MISC_STOP_QUEUE)
     static void stopCommand() {
         me.stopAndQuit();
     }
@@ -357,7 +320,7 @@ public class Queue extends Service {
         Method[] methods = src.getMethods();
 
         for (Method method : methods) {
-            addCommand cmd = method.getAnnotation(addCommand.class);
+            Command cmd = method.getAnnotation(Command.class);
             if (cmd == null) continue;
 
             Log.v(LOG_TAG, "Queue command method found: " + method.getName());

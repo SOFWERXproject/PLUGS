@@ -11,6 +11,7 @@ import com.aftac.Plugs;
 import com.aftac.plugs.DebugActivities.DebugMenuActivity;
 import com.aftac.plugs.MeshNetwork.MeshManager;
 import com.aftac.plugs.Queue.Queue;
+import com.aftac.plugs.Queue.QueueCommand;
 
 import android.view.View;
 
@@ -29,10 +30,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        Queue.Command command = new Queue.Command(
-                Queue.COMMAND_TARGET_SELF,  // The target device in the mesh network
+        QueueCommand command = new QueueCommand(
+                Queue.COMMAND_TARGET_SELF,  // The target device's id in the mesh network
                 Queue.COMMAND_CLASS_MISC,   // Owner "class" of the command
-                Queue.COMMAND_MISC_STOP,    // The command id
+                Queue.COMMAND_MISC_STOP_QUEUE,    // The command id
                 null);
         Queue.push(command);
     }
@@ -57,10 +58,8 @@ public class MainActivity extends AppCompatActivity {
     private void doInitialization() {
         if (!permissionsChecked)
             checkPermissions();
-        else {
+        else
             startService(new Intent(this, Queue.class));
-            MeshManager.init(this);
-        }
     }
 
     private void checkPermissions() {

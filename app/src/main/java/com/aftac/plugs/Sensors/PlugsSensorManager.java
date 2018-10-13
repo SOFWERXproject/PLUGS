@@ -61,8 +61,8 @@ public class PlugsSensorManager {
         workHandler = new Handler(sensorThread.getLooper(), workHandlerCallback);
     }
 
-    @Queue.addCommand(COMMAND_GET_SENSORS)
-    public static JSONArray getSensors(int type, String test) {
+    @Queue.Command(COMMAND_GET_SENSORS)
+    static public JSONArray getSensors(int type, String test) {
         Log.v(LOG_TAG, "Test string: " + test);
         List<Sensor> list = sensorManager.getSensorList(type);
         JSONArray ret = new JSONArray();

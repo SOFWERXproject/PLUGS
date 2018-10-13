@@ -7,6 +7,7 @@ import android.util.Log;
 import android.widget.TextView;
 
 import com.aftac.plugs.Queue.Queue;
+import com.aftac.plugs.Queue.QueueCommand;
 import com.aftac.plugs.R;
 import com.aftac.plugs.Sensors.PlugsSensorManager;
 
@@ -35,7 +36,7 @@ public class QueueDebugActivity extends AppCompatActivity {
         Object[] args = { Sensor.TYPE_ALL, "Test message" };
 
         // Build the command
-        Queue.Command command = new Queue.Command(
+        QueueCommand command = new QueueCommand(
                 Queue.COMMAND_TARGET_SELF,          // The target device in the mesh network
                 Queue.COMMAND_CLASS_SENSORS,        // Owner "class" of the command
                 PlugsSensorManager.COMMAND_GET_SENSORS,   // The command id
