@@ -60,13 +60,11 @@ public class MeshManager {
     public static final int STATE_LISTENING_FLAG  = 0x0002;
     public static final int STATE_CONNECTING_FLAG = 0x0004;
     public static final int STATE_CONNECTED_FLAG  = 0x0008;
-    public static final int STATE_DEVICE_ID_FLAG  = 0x0010;
     public static final int STATE_ERROR_FLAG      = 0x0080;
     public static final int STATE_ENABLED_CHANGED_FLAG    = 0x0100;
     public static final int STATE_LISTENING_CHANGED_FLAG  = 0x0200;
     public static final int STATE_CONNECTING_CHANGED_FLAG = 0x0400;
     public static final int STATE_CONNECTED_CHANGED_FLAG  = 0x0800;
-    public static final int STATE_DEVICE_ID_CHANGED_FLAG  = 0x1000;
     public static final int STATE_ERROR_OCCURRED_FLAG     = 0x8000;
 
     public static final int ERROR_NONE = 0;
@@ -89,7 +87,6 @@ public class MeshManager {
     private static boolean hasError = false;
     private static int lastError = ERROR_NONE;
     private static int lastErrorCode = 0;
-    private static String myDeviceId = "";
 
     private static boolean isListening = false;
     private static boolean isEnabled = false;
@@ -124,7 +121,6 @@ public class MeshManager {
     public static boolean isEnabled()    { return isEnabled;   }
     public static boolean isListening()  { return isListening; }
     public static boolean isConnected()  { return isConnected; }
-    public static String getMyDeviceId() { return myDeviceId;  }
 
     // Starts advertising & searching for peers
     @Queue.Command(COMMAND_START_DISCOVERY)
@@ -177,29 +173,33 @@ public class MeshManager {
     }
 
     @Queue.Command(COMMAND_ADD_TO_MESH_GROUP)
-    public static void addToMeshGroup(String deviceId, String commandSource) {
+    public static void addToMeshGroup(String name, QueueCommand cmd) {
         // TODO: addToMeshGroup
-        MeshDevice device = getDevice(deviceId);
+        String commandSource = (cmd != null ? cmd.getSource() : DEVICE_SELF);
+
+        MeshDevice device = getDevice(name);
+        Log.v(LOG_TAG, "Adding device to mesh: " + name);
 
         // Add device to mesh group and connect
         if (device != null) {
-            if (!inMeshGroup(deviceId)) {
+            if (!inMeshGroup(name)) {
                 myMeshGroup.add(device);
                 if (device.isConnected) {
                     // Send current mesh group members to new member
                     if (commandSource.equals(DEVICE_SELF))
-                        connectToMeshGroup(deviceId);
+                        device.newInGroup = true;
                 } else {
-                    connectTo(deviceId);
+                    connectTo(name);
                     device.newInGroup = true;
                 }
             } else {
                 if (!device.isConnected() && !device.isConnecting())
-                    connectTo(deviceId);
-                return;
+                    connectTo(name);
+                else if (commandSource.equals(DEVICE_SELF))
+                    pokeDevice(name);
             }
         } else {
-            device = new MeshDevice(deviceId, "");
+            device = new MeshDevice(name, "");
             device.newInGroup = true;
             myMeshGroup.add(device);
         }
@@ -227,20 +227,21 @@ public class MeshManager {
 
         // Wait for confirmations & retry as necessary
     }
-    public static void addToMeshGroup(String deviceId) {
-        addToMeshGroup(deviceId, DEVICE_SELF);
+    public static void addToMeshGroup(String name) {
+        addToMeshGroup(name, null);
     }
 
-    private static void connectToMeshGroup(String deviceId) {
+    private static void connectToMeshGroup(String name) {
+        String myName = Queue.getName();
         for (MeshDevice addDevice : myMeshGroup) {
-            if (deviceId.equals(addDevice.id))
+            if (name.equals(addDevice.name))
                 continue;
 
-            Log.v(LOG_TAG, "Connecting " + deviceId + " to " + addDevice.id);
+            Log.v(LOG_TAG, "Connecting " + name + " to " + addDevice.name);
 
-            Object[] args = {addDevice.id, addDevice.id};
+            Object[] args = {addDevice.name};
             QueueCommand cmd = new QueueCommand(
-                    deviceId,
+                    name,
                     Queue.COMMAND_CLASS_MESH_NET,
                     MeshManager.COMMAND_ADD_TO_MESH_GROUP,
                     new JSONArray(Arrays.asList(args)));
@@ -248,8 +249,18 @@ public class MeshManager {
         }
     }
 
+    public static void pokeDevice(String name) {
+        QueueCommand cmd = new QueueCommand(
+                name,
+                Queue.COMMAND_CLASS_MISC,
+                Queue.COMMAND_MISC_POKE,
+                new JSONArray());
+
+        Queue.push(cmd);
+    }
+
     @Queue.Command(COMMAND_REMOVE_FROM_MESH_GROUP)
-    public static void removeFromMeshGroup(String deviceId, String commandSource) {
+    public static void removeFromMeshGroup(String name, String commandSource) {
         // TODO: removeFromMeshGroup
 
         // The following assumes source is DEVICE_SELF
@@ -257,8 +268,8 @@ public class MeshManager {
         // Tell the rest of the members of the mesh group the device is gone now
         // Wait for confirmations & retry as necessary
     }
-    public static void removeFromMeshGroup(String deviceId) {
-        removeFromMeshGroup(deviceId, DEVICE_SELF);
+    public static void removeFromMeshGroup(String name) {
+        removeFromMeshGroup(name, DEVICE_SELF);
     }
 
     // Callback for when peers are discovered
@@ -267,32 +278,39 @@ public class MeshManager {
         // Adds a new peer to the available list
         @Override
         public void onEndpointFound(String deviceId, DiscoveredEndpointInfo info) {
-            deviceAddAvailable(deviceId, info.getEndpointName());
-            if (inMeshGroup(deviceId))
-                connectTo(deviceId);
-
-            Log.d(LOG_TAG, "Endpoint found: " + deviceId);
+            String name = info.getEndpointName();
+            Log.v(LOG_TAG, "Endpoint found: " + name + ", " + deviceId);
+            deviceAddAvailable(name, deviceId);
+            if (inMeshGroup(name))
+                connectTo(name);
         }
 
         // Removes a peer from the available list
         @Override
         public void onEndpointLost(String deviceId) {
-            deviceRemoveAvailable(deviceId);
-            Log.d(LOG_TAG, "Endpoint lost: " + deviceId);
+            MeshDevice device = getDeviceById(deviceId);
+            if (device == null) {
+                Log.v(LOG_TAG, "Endpoint lost: " + deviceId + ", %null%");
+                return;
+            }
+            Log.v(LOG_TAG, "Endpoint lost: " + deviceId + ", " + device.name);
+
+            deviceRemoveAvailable(device.name);
         }
     };
 
     // Starts connection to a peer
-    public static void connectTo(String deviceId) {
-        MeshDevice device = getDevice(deviceId);
+    public static void connectTo(String name) {
+        MeshDevice device = getDevice(name);
+        Log.v(LOG_TAG, "Connecting to: " + name);
         // Ignore devices that don't exist, and ones that already are or are currently connecting.
-        if (device == null || device.isConnected || device.isConnecting) return;
+        if (device == null || device.id == null || device.isConnected || device.isConnecting) return;
 
         // Send the connection request
-        deviceConnecting(deviceId);
+        deviceConnecting(name);
         connectionsClient.requestConnection(
                     Queue.getName(),
-                    deviceId,
+                    device.id,
                     connectionLifecycleCallback)
             .addOnSuccessListener((e) -> {
                 Log.d(LOG_TAG, "Request connection succeeded");
@@ -302,7 +320,7 @@ public class MeshManager {
             .addOnFailureListener((e)-> {
                 Log.d(LOG_TAG, "Request connection failed");
                 e.printStackTrace();
-                deviceNotConnecting(deviceId);
+                deviceNotConnecting(name);
             });
     }
 
@@ -312,53 +330,48 @@ public class MeshManager {
         // Handles initiation (both locally & remotely requested) of a connection
         @Override
         public void onConnectionInitiated(String deviceId, ConnectionInfo info) {
+            String name = info.getEndpointName();
             Log.d(LOG_TAG, "Connection initiated: " + deviceId);
 
             // TODO: This is where an "Are you sure you want to connect" dialog would be shown
 
             connectionsClient.acceptConnection(deviceId, payloadCallback);
             // This device isn't in the available list, add it.
-            if (getDevice(deviceId) == null)
-                deviceAddAvailable(deviceId, info.getEndpointName());
+            if (getDevice(name) == null)
+                deviceAddAvailable(name, deviceId);
 
             // Set this deviceId's status to connecting
-            deviceConnecting(deviceId);
+            deviceConnecting(name);
         }
 
         // Determines if connection was successful or not, and reacts accordingly
         @Override
         public void onConnectionResult(String deviceId, ConnectionResolution result) {
+            MeshDevice device = getDeviceById(deviceId);
             Log.d(LOG_TAG, "Connection result: " + deviceId);
             switch (result.getStatus().getStatusCode()) {
                 case ConnectionsStatusCodes.STATUS_OK:
-                    Log.d(LOG_TAG, "Connection ok - " + deviceId);
-                    deviceAddConnected(deviceId);
-                    int headerLength = 12 + deviceId.length() + 1;
+                    Log.d(LOG_TAG, "Connection ok - " + device.name);
+                    deviceAddConnected(device.name);
 
-                    if (!inMeshGroup(deviceId))
-                        addToMeshGroup(deviceId);
+                    if (!inMeshGroup(device.name))
+                        addToMeshGroup(device.name);
 
-                    MeshDevice device = getDevice(deviceId);
                     device.serialRx = 0;
                     device.serialTx = 0;
-                    send(device.id, CONTENT_HELLO, null);
-
-                    if (device.newInGroup) {
-                        device.newInGroup = false;
-                        connectToMeshGroup(deviceId);
-                    }
+                    send(device.name, CONTENT_HELLO, null);
                 break;
                 case ConnectionsStatusCodes.STATUS_CONNECTION_REJECTED:
-                    Log.d(LOG_TAG, "Connection rejected - " + deviceId);
-                    deviceNotConnecting(deviceId);
+                    Log.d(LOG_TAG, "Connection rejected - " + device.name);
+                    deviceNotConnecting(device.name);
                 break;
                 case ConnectionsStatusCodes.STATUS_ERROR:
-                    Log.d(LOG_TAG, "Connection error - " + deviceId);
-                    deviceNotConnecting(deviceId);
+                    Log.d(LOG_TAG, "Connection error - " + device.name);
+                    deviceNotConnecting(device.name);
                 break;
                 default:
                     // If the connection status wasn't "OK", assume it failed.
-                    deviceNotConnecting(deviceId);
+                    deviceNotConnecting(device.name);
                 break;
             }
         }
@@ -367,7 +380,8 @@ public class MeshManager {
         @Override
         public void onDisconnected(String deviceId) {
             Log.d(LOG_TAG, "Disconnected: " + deviceId);
-            deviceRemoveConnected(deviceId);
+            MeshDevice device = getDeviceById(deviceId);
+            deviceRemoveConnected(device.name);
         }
     };
 
@@ -400,8 +414,8 @@ public class MeshManager {
         }
 
         private void processPayload(String deviceId, Payload payload) {
-            Log.d(LOG_TAG, "Payload received: " + deviceId);
-            MeshDevice device = getDevice(deviceId);
+            MeshDevice device = getDeviceById(deviceId);
+            Log.d(LOG_TAG, "Payload received: " + device.name);
 
             ByteBuffer buf = ByteBuffer.wrap(payload.asBytes());
 
@@ -417,30 +431,42 @@ public class MeshManager {
             int serial       = buf.getInt();
             int contentType  = buf.getInt();
             byte chr;
-            String srcId = "";  while ((chr = buf.get()) !=0)  {  srcId += (char)chr; }
-            String destId = ""; while ((chr = buf.get()) != 0) { destId += (char)chr; }
+            String src = ""; while ((chr = buf.get()) != 0) { src += (char)chr; }
+            String dst = ""; while ((chr = buf.get()) != 0) { dst += (char)chr; }
 
 
             Log.v(LOG_TAG, "Payload: " + headerLength + ", " + serial + ", " + contentType
-                    + ", " + destId + ", " + srcId);
+                    + ", " + src + ", " + dst);
 
             if (serial != device.serialRx++) {
-                Log.v(LOG_TAG, "WARNING " + deviceId + ": Serial value jump ("
+                Log.v(LOG_TAG, "WARNING " + device.name + ": Serial value jump ("
                         + device.serialRx + ", " + serial + ")");
                 device.serialRx = ++serial;
             }
-            if (!srcId.equals("") && srcId.equals(deviceId))
-                Log.v(LOG_TAG, "WARNING: Device Id mismatch (" + deviceId + ", " + srcId + ")");
-
+            if (!src.equals(device.name)) {
+                Log.v(LOG_TAG, "WARNING: Source device name mismatch (" + device.name + ", " + src + ")");
+                MeshDevice tDevice = getDevice(src);
+                if (tDevice != null) {
+                    if (tDevice.isConnecting)
+                        deviceNotConnecting(src);
+                    if (tDevice.isAvailable)
+                        deviceRemoveAvailable(src);
+                }
+                device.name = src;
+                device.isConnected = true;
+            }
 
             switch (contentType) {
                 case CONTENT_HELLO:
-                    if (!myDeviceId.equals("") && !myDeviceId.equals(destId)) {
-                        Log.v(LOG_TAG, "WARNING " + deviceId + ": device ID mismatch ("
-                                + myDeviceId + ", " + destId + ")");
+                    if (!dst.equals(Queue.getName())) {
+                        Log.v(LOG_TAG, "WARNING Destination device name mismatch (" + dst
+                                + ", " + Queue.getName() + ")");
                     }
-                    myDeviceId = destId;
-                    onStatusChanged(STATE_DEVICE_ID_CHANGED_FLAG);
+
+                    if (device.newInGroup) {
+                        device.newInGroup = false;
+                        connectToMeshGroup(device.name);
+                    }
                 break;
                 case CONTENT_COMMENT:
                     // Ignore
@@ -479,13 +505,17 @@ public class MeshManager {
         }
     };
 
-    public static void send(String destinationId, int contentType, byte[] data) {
-        if (destinationId == DEVICE_ALL) {
+    public static void send(String destination, int contentType, byte[] data) {
+        if (destination.equals(DEVICE_ALL)) {
             // TODO: Send payload to all in mesh group
         } else {
-            Log.v(LOG_TAG, "Sending: " + destinationId + ", " + contentType);
-            MeshDevice device = getDevice(destinationId);
-            int headerLength = 12 + destinationId.length() + myDeviceId.length() + 2;
+            Log.v(LOG_TAG, "Sending: " + destination + ", " + contentType);
+            MeshDevice device = getDevice(destination);
+            if (device == null || device.id.equals("")) {
+                Log.v(LOG_TAG, "Error: Trying to send to non-existant endpoint \""
+                            + destination + "\"");
+            }
+            int headerLength = 12 + destination.length() + Queue.getName().length() + 2;
             int length = headerLength;
             if (data != null)
                 length += data.length;
@@ -493,31 +523,31 @@ public class MeshManager {
             buf.putInt(headerLength);
             buf.putInt(device.serialTx++);
             buf.putInt(contentType);
-            buf.put(myDeviceId.getBytes()); buf.put((byte)0);
-            buf.put(destinationId.getBytes()); buf.put((byte)0);
+            buf.put(Queue.getName().getBytes()); buf.put((byte)0);
+            buf.put(destination.getBytes()); buf.put((byte)0);
             if (data != null)
                 buf.put(data);
 
-            connectionsClient.sendPayload(destinationId, Payload.fromBytes(buf.array()));
+            connectionsClient.sendPayload(device.id, Payload.fromBytes(buf.array()));
         }
     }
 
-    private static boolean inMeshGroup(String deviceId) {
+    private static boolean inMeshGroup(String name) {
         for (MeshDevice device : myMeshGroup) {
-            if (deviceId.equals(device.id))
+            if (name.equals(device.name))
                 return true;
         }
         return false;
     }
 
     // Adds a peer to the available devices list
-    private static void deviceAddAvailable(String deviceId, String deviceName) {
+    private static void deviceAddAvailable(String name, String id) {
         // If an instance already exists for this deviceId reuse it, otherwise create a new one
-        MeshDevice device = getDevice(deviceId);
+        MeshDevice device = getDevice(name);
         if (device == null)
-            device = new MeshDevice(deviceId, deviceName);
-        else if (deviceName != null)
-            device.name = deviceName; // Update name on recycled deviceId
+            device = new MeshDevice(name, id);
+        else if (!(device.isConnecting || device.isConnected))
+            device.id = id; // Update name on recycled deviceId
 
         // Try to prevent unnecessary onDeviceChanged events, and accidental duplicate devices
         if (!device.isAvailable) {
@@ -528,8 +558,8 @@ public class MeshManager {
         }
     }
     // Removes a peer from the available devices list
-    private static void deviceRemoveAvailable(String deviceId) {
-        MeshDevice device = getDevice(deviceId);
+    private static void deviceRemoveAvailable(String name) {
+        MeshDevice device = getDevice(name);
         // If the device doesn't exist our work here is done
         if (device == null) return;
 
@@ -559,8 +589,8 @@ public class MeshManager {
     }
 
     // Sets a device's status to connecting
-    private static void deviceConnecting(String deviceId) {
-        MeshDevice device = getDevice(deviceId);
+    private static void deviceConnecting(String name) {
+        MeshDevice device = getDevice(name);
         // A non-existent device can't connect...
         if (device == null) return;
 
@@ -568,8 +598,8 @@ public class MeshManager {
         onDevicesChanged();
     }
     // Clears the connecting status from a device
-    private static void deviceNotConnecting(String deviceId) {
-        MeshDevice device = getDevice(deviceId);
+    private static void deviceNotConnecting(String name) {
+        MeshDevice device = getDevice(name);
         // Ignore non-existent devices...
         if (device == null) return;
 
@@ -581,8 +611,8 @@ public class MeshManager {
     }
 
     // Adds a device to the connected devices list
-    private static void deviceAddConnected(String deviceId) {
-        MeshDevice device = getDevice(deviceId);
+    private static void deviceAddConnected(String name) {
+        MeshDevice device = getDevice(name);
         if (device == null) return;
 
         // Don't add devices to the connected list if they're already connected
@@ -597,8 +627,8 @@ public class MeshManager {
     }
 
     // Removes a device from the connected list
-    private static void deviceRemoveConnected(String deviceId) {
-        MeshDevice device = getDevice(deviceId);
+    private static void deviceRemoveConnected(String name) {
+        MeshDevice device = getDevice(name);
         if (device == null) return;
 
         // Not connecting, not connected, it's just not.
@@ -609,19 +639,37 @@ public class MeshManager {
     }
 
     // Searches for a MeshDevice with a given device Id
-    private static MeshDevice getDevice(String deviceId) {
+    private static MeshDevice getDevice(String name) {
         for (MeshDevice device : myMeshGroup) {
-            if (deviceId.equals(device.id))
+            if (name.equals(device.name))
                 return device;
         }
         // Check for a device with the same deviceId in the connected devices
         for (MeshDevice device : connectedDevices) {
-            if (deviceId.equals(device.id))
+            if (name.equals(device.name))
                 return device;
         }
         // Check for a device with the same deviceId in the available devices
         for (MeshDevice device : availableDevices) {
-            if (deviceId.equals(device.id))
+            if (name.equals(device.name))
+                return device;
+        }
+        // No device found
+        return null;
+    }
+    private static MeshDevice getDeviceById(String id) {
+        for (MeshDevice device : myMeshGroup) {
+            if (id.equals(device.id))
+                return device;
+        }
+        // Check for a device with the same deviceId in the connected devices
+        for (MeshDevice device : connectedDevices) {
+            if (id.equals(device.id))
+                return device;
+        }
+        // Check for a device with the same deviceId in the available devices
+        for (MeshDevice device : availableDevices) {
+            if (id.equals(device.id))
                 return device;
         }
         // No device found
@@ -632,8 +680,11 @@ public class MeshManager {
     // This is basically just an extra layer of protection against duplicate devices
     private static void addDevice(MeshDevice device, List<MeshDevice> list) {
         for (MeshDevice lDevice : list) {
-            if (lDevice.id.equals(device.id))
+            if (lDevice.name.equals(device.name) || lDevice.id.equals(device.id)) {
+                lDevice.name = device.name;
+                lDevice.id   = device.id;
                 return;
+            }
         }
         list.add(device);
     }
@@ -694,7 +745,7 @@ public class MeshManager {
         for (MeshDevice device : connectedDevices) {
             exists = false;
             for (MeshDevice checkDevice : availableDevices) {
-                if (device.id.equals(checkDevice.id)) {
+                if (device.name.equals(checkDevice.name)) {
                     exists = true;
                     break;
                 }
@@ -736,7 +787,6 @@ public class MeshManager {
                         | (isConnected        ? STATE_ENABLED_FLAG   : 0)
                         | (isListening        ? STATE_LISTENING_FLAG : 0)
                         | (isConnected        ? STATE_CONNECTED_FLAG : 0)
-                        | (myDeviceId != null ? STATE_DEVICE_ID_FLAG : 0)
                         | (hasError           ? STATE_ERROR_FLAG     : 0);
         for (ListenerCallback callback : statusChangeListeners) {
             callback.handler.post(() -> ((MeshStatusChangedListener) callback.listenerRef.get())

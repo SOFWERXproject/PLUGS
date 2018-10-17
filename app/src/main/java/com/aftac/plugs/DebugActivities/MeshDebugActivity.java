@@ -107,9 +107,6 @@ public class MeshDebugActivity extends AppCompatActivity
                         "Disconnected from network");
                 peerListAdapter.notifyDataSetChanged();
             break;
-            case MeshManager.STATE_DEVICE_ID_CHANGED_FLAG:
-                TextView txtLocalName = findViewById(R.id.txt_mesh_local_name);
-                txtLocalName.setText(Queue.getName() + " (" + MeshManager.getMyDeviceId() + ")");
             case MeshManager.STATE_ERROR_OCCURRED_FLAG:
             break;
         }
@@ -139,21 +136,19 @@ public class MeshDebugActivity extends AppCompatActivity
         class PeerViewHolder extends RecyclerView.ViewHolder {
             private View myView;
             private String deviceName;
-            private String deviceId;
 
             PeerViewHolder(View view) {
                 super(view);
                 view.findViewById(R.id.device_name);
 
                 myView = view;
-                myView.setOnClickListener((v) -> MeshManager.addToMeshGroup(deviceId) );
+                myView.setOnClickListener((v) -> MeshManager.addToMeshGroup(deviceName) );
             }
 
             void setDevice(MeshDevice device, boolean connected) {
                 this.deviceName = device.getName();
-                this.deviceId = device.getId();
                 ((TextView)myView.findViewById(R.id.device_name))
-                            .setText(deviceName + " (" + deviceId + ")");
+                            .setText(deviceName);
                 ((TextView)myView.findViewById(R.id.device_details)).setText(
                             (device.isConnected() ? "Connected" :
                             (device.isConnecting() ? "Connecting" : "Available")));

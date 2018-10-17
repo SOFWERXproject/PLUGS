@@ -2,6 +2,7 @@ package com.aftac.plugs;
 
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -30,12 +31,12 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        QueueCommand command = new QueueCommand(
+        /*QueueCommand command = new QueueCommand(
                 Queue.COMMAND_TARGET_SELF,  // The target device's id in the mesh network
                 Queue.COMMAND_CLASS_MISC,   // Owner "class" of the command
                 Queue.COMMAND_MISC_STOP_QUEUE,    // The command id
                 null);
-        Queue.push(command);
+        Queue.push(command);*/
     }
 
     public void gotoDebugMenu(View view) {
@@ -95,7 +96,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         doInitialization();
     }
 }

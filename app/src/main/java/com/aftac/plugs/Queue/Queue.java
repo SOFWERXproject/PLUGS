@@ -10,6 +10,7 @@ import android.os.IBinder;
 import android.os.Message;
 import android.util.Log;
 import android.util.SparseArray;
+import android.widget.Toast;
 
 import com.aftac.plugs.MeshNetwork.MeshManager;
 import com.aftac.plugs.MeshNetwork.MeshManager.MeshStatusChangedListener;
@@ -26,9 +27,6 @@ import java.lang.annotation.Target;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.nio.ByteBuffer;
-
-import static com.aftac.plugs.Queue.Queue.COMMAND_MISC_STOP_QUEUE;
 
 public class Queue extends Service {
     static final String LOG_TAG =  Queue.class.getSimpleName();
@@ -43,7 +41,9 @@ public class Queue extends Service {
     public final static int COMMAND_CLASS_MESH_NET  = 3;
     public final static int COMMAND_CLASS_BASE_COMM = 4;
 
+
     public static final int COMMAND_MISC_STOP_QUEUE = 1;
+    public final static int COMMAND_MISC_POKE       = 100;
 
     static final int ITEM_TYPE_NONE = 0;
     static final int ITEM_TYPE_COMMAND = 1;
@@ -60,27 +60,25 @@ public class Queue extends Service {
     private static Queue me;
 
     private static String myName = "Plugs-";
-    private static String myId = "";
     volatile private static Boolean running = false;
     private static boolean initialized = false;
 
 
     public static String setName(String name) { return myName = name; }
     public static String getName() { return myName; }
-    public static String getId() { return myId; }
 
 
     static abstract class QueueItem implements Serializable{
         abstract int getType();
         long timestamp;
-        String sourceId = myId;
+        String source = myName;
     }
 
 
     // onStartedListener
     private static onStartedListener startListener = null;
     public interface onStartedListener { void onQueueStarted(); }
-    public static void setStartedListener(onStartedListener obj) { startListener = obj; }
+    public static void setStartedListener(onStartedListener listener) { startListener = listener; }
 
     // No need to bind to the queue service
     @Override public IBinder onBind(Intent intent) { return null; }
@@ -139,14 +137,21 @@ public class Queue extends Service {
     }
 
 
+    @Queue.Command(COMMAND_MISC_POKE)
+    public static void poke(QueueCommand cmd) {
+        Toast toast = Toast.makeText(me.getBaseContext(), "Pinged from " + cmd.getSource(),
+                Toast.LENGTH_SHORT);
+
+        mainHandler.post(toast::show);
+    }
+
+
     /*
         Privates
     */
     private void init() {
         MeshManager.init(this);
         PlugsSensorManager.init(this.getBaseContext());
-
-        MeshManager.addOnStatusChangedListener(deviceIdListener);
 
         int id = (int) (Math.random() * Integer.MAX_VALUE);
         myName += Integer.toHexString(id & 0xFFFF);
@@ -181,25 +186,25 @@ public class Queue extends Service {
             if (!bundle.containsKey("content")) return false;
 
             QueueItem content = (QueueItem) bundle.getSerializable("content");
-            Log.v(LOG_TAG, "Queue is processing an item (" + content.getType() + ") " + myId);
+            Log.v(LOG_TAG, "Queue is processing an item (" + content.getType() + ") " + myName);
 
             switch (content.getType()) {
                 case ITEM_TYPE_COMMAND:
                     QueueCommand cmd = (QueueCommand)content;
-                    String target = cmd.targetId;
+                    String target = cmd.target;
 
-                    Log.v(LOG_TAG, cmd.sourceId + ", " + cmd.targetId + ", "
+                    Log.v(LOG_TAG, cmd.source + ", " + cmd.target + ", "
                                 + cmd.commandClass + ", " + cmd.commandId);
 
                     // Forward commands from local device not targeted at self
-                    if ((!myId.equals("") && cmd.sourceId.equals(myId))
-                            && !(target.equals(COMMAND_TARGET_SELF) || target.equals(myId))) {
-                        MeshManager.send(cmd.targetId, MeshManager.CONTENT_COMMAND, cmd.toBytes());
+                    if (cmd.source.equals(myName)
+                            && !(target.equals(COMMAND_TARGET_SELF) || target.equals(myName))) {
+                        MeshManager.send(cmd.target, MeshManager.CONTENT_COMMAND, cmd.toBytes());
                     }
 
                     // Process commands targeted at the local device
                     if (target.equals(COMMAND_TARGET_SELF) || target.equals(COMMAND_TARGET_ALL)
-                                || (!myId.equals("") && target.equals(myId))) {
+                                || target.equals(myName)) {
                         Log.v(LOG_TAG, "Queue is processing a command");
                         try { processCommand(cmd); }
                         catch (Exception e) { Log.e(LOG_TAG, "Exception", e); }
@@ -247,19 +252,36 @@ public class Queue extends Service {
                 return;
         }
 
-        // Turn the argument JSONArray into an Object Array so the arguments get passed properly
+        // Get the method to be executed
+        Method method = list.get(command.commandId);
+        // Get the arguments
         JSONArray jsonArgs = command.args;
+
+        // Determine if the command should be added as an argument
+        Class[] methodParms = method.getParameterTypes();
+        boolean addCommandArg = false;
+        if (methodParms.length > 0 && methodParms[methodParms.length - 1] == QueueCommand.class) {
+            if (jsonArgs != null) {
+                if (methodParms.length > jsonArgs.length())
+                    addCommandArg = true;
+            } else
+                addCommandArg = true;
+        }
+
+        // Turn the argument JSONArray into an Object Array so the arguments get passed properly
         Object[] args = null;
         if (jsonArgs != null){
             int len = jsonArgs.length();
-            args = new Object[len];
+            args = new Object[addCommandArg ? len + 1 : len];
             for (int i = 0; i < len; i++) {
                 args[i] = jsonArgs.opt(i);
             }
-        }
+            if (addCommandArg)
+                args[args.length - 1] = command;
+        } else if (addCommandArg)
+            args = new Object[]{command};
 
         // Execute the command
-        Method method = list.get(command.commandId);
         Object returnVal = method.invoke(null, args);
 
         // Return the response to the listener
@@ -289,17 +311,6 @@ public class Queue extends Service {
         me = null;
         Log.v(LOG_TAG, "Queue service has stopped");
     }
-
-    MeshStatusChangedListener deviceIdListener = new MeshStatusChangedListener() {
-        @Override
-        public void onMeshStatusChanged(int statusFlags) {
-            if ((statusFlags & MeshManager.STATE_DEVICE_ID_CHANGED_FLAG) > 0) {
-                myId = MeshManager.getMyDeviceId();
-                Log.v(LOG_TAG, "My id is: " + myId);
-                MeshManager.removeOnStatusChangedListener(deviceIdListener);
-            }
-        }
-    };
 
     // Custom annotation to mark queue commands
     @Retention(RetentionPolicy.RUNTIME)

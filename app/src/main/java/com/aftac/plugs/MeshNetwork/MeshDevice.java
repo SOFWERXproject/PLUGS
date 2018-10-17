@@ -7,8 +7,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MeshDevice {
-    String id;
     String name;
+    String id;
     int serialRx;
     int serialTx;
     boolean newInGroup   = false;
@@ -19,13 +19,12 @@ public class MeshDevice {
     int groupAddStatus = 0;
     List<MeshDevice> confirmedGroupMembers = new ArrayList<>();
 
-    MeshDevice(String id, String name) {
+    MeshDevice(String name, String id) {
         this.id = id;
         this.name = name;
         serialRx = 0;
         serialTx = 0;
     }
-    public String getId()   { return id; }
     public String getName() { return name; }
     public boolean isConnected() { return isConnected; }
     public boolean isConnecting() { return isConnecting; }
