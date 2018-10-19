@@ -9,6 +9,7 @@ import android.util.Log;
 import com.aftac.plugs.Queue.Queue;
 
 import com.aftac.plugs.Queue.QueueCommand;
+import com.aftac.plugs.Queue.QueueTrigger;
 import com.google.android.gms.nearby.Nearby;
 import com.google.android.gms.nearby.connection.AdvertisingOptions;
 import com.google.android.gms.nearby.connection.ConnectionInfo;
@@ -492,8 +493,8 @@ public class MeshManager {
                     Queue.push(command);
                 break;
                 case CONTENT_TRIGGER:
-                    //Queue.Trigger trigger = new Queue.Trigger(buf.slice());
-                    //Queue.push(trigger);
+                    QueueTrigger trigger = new QueueTrigger(buf.slice());
+                    Queue.push(trigger);
                 break;
                 //case CONTENT_COMMAND_RESPONSE:
                 //break;

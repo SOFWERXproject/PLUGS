@@ -33,4 +33,9 @@ public class DebugMenuActivity extends AppCompatActivity{
         //startActivity(intent);
     }
 
+    public void gotoDebugTriggers(View view) {
+        Intent intent = new Intent(this, TriggerDebugActivity.class);
+        startActivity(intent);
+    }
+
 }
