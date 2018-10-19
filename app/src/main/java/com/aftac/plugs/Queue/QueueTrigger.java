@@ -1,5 +1,9 @@
 package com.aftac.plugs.Queue;
 
+import android.util.Log;
+
+import com.aftac.plugs.Sensors.PlugsSensorManager;
+
 import java.nio.ByteBuffer;
 
 public class QueueTrigger extends Queue.QueueItem {
@@ -21,9 +25,28 @@ public class QueueTrigger extends Queue.QueueItem {
 
     public QueueTrigger(ByteBuffer buffer) {
         super();
+        byte chr;
+        this.source = ""; while ((chr = buffer.get()) != 0) { this.source += (char)chr; }
         this.timestamp = buffer.getLong();
         this.sensorType = buffer.getInt();
         this.sensorIndex = buffer.getInt();
         this.data = buffer.slice();
+    }
+
+    public String getSource() { return source; }
+
+    public byte[] toBytes() {
+        data.rewind();
+        ByteBuffer ret = ByteBuffer.wrap(new byte[16 + source.length() + 1 + data.remaining()]);
+
+        try {
+            ret.put(source.getBytes()); ret.put((byte)0);
+        } catch (Exception e) { e.printStackTrace(); }
+        ret.putLong(timestamp);
+        ret.putInt(sensorType);
+        ret.putInt(sensorIndex);
+
+        ret.put(data);
+        return ret.array();
     }
 }

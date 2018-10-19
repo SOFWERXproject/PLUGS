@@ -1,6 +1,9 @@
 package com.aftac.plugs.Sensors;
 
+import android.util.Log;
+
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 
 // Class to send data to listeners of PlugsSensors
@@ -20,10 +23,13 @@ public class PlugsSensorEvent {
         this.sensorIndex = sensorIndex;
         this.sensorType = sensorType;
         this.accuracy = accuracy;
+        data.rewind();
+        data.order(ByteOrder.LITTLE_ENDIAN);
         this.data = data.slice();
-        if ((sensorIndex & PlugsSensorManager.STANDARD_ANDROID_SENSOR_MASK) > 0) {
-            FloatBuffer floatBuf = data.slice().asFloatBuffer();
-            values = new float[floatBuf.limit() - floatBuf.position()];
+        if ((sensorIndex & PlugsSensorManager.STANDARD_ANDROID_SENSOR_MASK) != 0) {
+            FloatBuffer floatBuf = data.asFloatBuffer();
+
+            values = new float[floatBuf.limit()];
             floatBuf.get(values);
         }
     }

@@ -6,6 +6,7 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Handler;
 import android.os.SystemClock;
+import android.util.Log;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -24,7 +25,7 @@ class PlugsSensorWrapper implements SensorEventListener {
     final List<Handler> handlers = new ArrayList<>();
 
     private volatile boolean running = false;
-    private volatile boolean nulled = true;
+    private volatile boolean nulled = false;
     private long bestMilliOffset = Long.MAX_VALUE;
 
     boolean isRunning() { return running; }
@@ -39,6 +40,9 @@ class PlugsSensorWrapper implements SensorEventListener {
         this.sensorManager = sensorManager;
         this.sensorHandler = sensorHandler;
         this.workHandler = workHandler;
+
+        List<Sensor> sensors = sensorManager.getSensorList(type);
+        this.sensor = sensors.get(index);
     }
 
     // Start reading data from a sensor
@@ -109,11 +113,12 @@ class PlugsSensorWrapper implements SensorEventListener {
         buf.order(ByteOrder.LITTLE_ENDIAN);
         // Use slice to get a reference sharing the same buffer starting at it's current position
         // then use it as a FloatBuffer to write the values float array into it.
-        buf.slice().asFloatBuffer().put(event.values);
+        buf.clear();
+        buf.asFloatBuffer().put(event.values);
 
         workHandler.post(()-> {
-            // Reset buffer position
-            buf.reset();
+            buf.rewind();
+            index |= PlugsSensorManager.STANDARD_ANDROID_SENSOR_MASK;
             // Create a PlugsSensorEvent
             PlugsSensorEvent thisEvent = new PlugsSensorEvent(utcTimestamp,
                     index | PlugsSensorManager.STANDARD_ANDROID_SENSOR_MASK,

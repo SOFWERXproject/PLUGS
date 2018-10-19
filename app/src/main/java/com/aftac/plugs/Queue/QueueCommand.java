@@ -61,13 +61,16 @@ public class QueueCommand extends Queue.QueueItem {
         } catch (Exception e) { e.printStackTrace(); }
     }
 
+    public String getSource() { return source; }
+    public String getTarget() { return target; }
+
     public byte[] toBytes() {
         Log.v(Queue.LOG_TAG, "Command packed: " + source + ", " + target + ", "
                 + commandClass + ", " + commandId);
 
         String argStr = args.toString();
         ByteBuffer ret = ByteBuffer.wrap(new byte[8 + source.length() + target.length()
-                    + argStr.length() + 3]);
+                + argStr.length() + 3]);
 
         try {
             ret.put(source.getBytes()); ret.put((byte)0);
@@ -79,9 +82,6 @@ public class QueueCommand extends Queue.QueueItem {
 
         return ret.array();
     }
-
-    public String getSource() { return source; }
-    public String getTarget() { return target; }
 
     // A handler can be set for the responseListener, or just make one for the calling thread
     public void setResponseListener(CommandResponseListener listener, Handler handler) {

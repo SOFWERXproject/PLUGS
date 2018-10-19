@@ -36,6 +36,8 @@
         <activity
             android:name=".DebugActivities.QueueDebugActivity"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
+        <activity
+            android:name=".DebugActivities.TriggerDebugActivity" />
         <activity android:name=".ConfigurationActivity" />
         <activity android:name=".DeployActivity" />
 

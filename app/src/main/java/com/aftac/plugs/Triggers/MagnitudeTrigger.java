@@ -1,5 +1,7 @@
 package com.aftac.plugs.Triggers;
 
+import android.util.Log;
+
 import com.aftac.plugs.Queue.Queue;
 import com.aftac.plugs.Queue.QueueTrigger;
 import com.aftac.plugs.Sensors.PlugsSensorEvent;
@@ -42,9 +44,8 @@ public class MagnitudeTrigger extends PlugsTrigger {
         float magnitude = (float) Math.sqrt(values[0] * values[0]
                                           + values[1] * values[1]
                                           + values[2] * values[2]);
-        lastValue = magnitude;
         //runningAverage = (float) ((magnitude * 0.1) + runningAverage * 0.9);
-        if (settleSamples <= 0) {
+        if (enabled && settleSamples <= 0) {
             if  (magnitude > sensitivity) {
                 ByteBuffer data = ByteBuffer.wrap(new byte[Float.BYTES]);
                 data.asFloatBuffer().put(magnitude);

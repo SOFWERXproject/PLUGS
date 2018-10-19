@@ -15,13 +15,15 @@ import org.json.JSONArray;
 import java.util.List;
 
 public class PlugsSensorManager {
-    private static final String LOG_TAG = PlugsSensorManager.class.getSimpleName();
+    static final String LOG_TAG = PlugsSensorManager.class.getSimpleName();
     public static final int COMMAND_GET_SENSORS = 0;
+
+    public static final int STANDARD_ANDROID_SENSOR_MASK = 0x80000000;
 
     private static int LIST_INITIAL_SIZE = 5;
     private static int LIST_GROW_SIZE = 5;
 
-    static final int STANDARD_ANDROID_SENSOR_MASK = 0x80000000;
+
 
     private static String className = PlugsSensorManager.class.getName();
     private static SensorManager sensorManager = null;
@@ -117,7 +119,7 @@ public class PlugsSensorManager {
         int index = -1;
         List<Sensor> androidSensors = sensorManager.getSensorList(type);
         Sensor defaultSensor = sensorManager.getDefaultSensor(type);
-        while (androidSensors.get(++index) == defaultSensor);
+        while (androidSensors.get(++index) != defaultSensor);
         return index;
     }
 }

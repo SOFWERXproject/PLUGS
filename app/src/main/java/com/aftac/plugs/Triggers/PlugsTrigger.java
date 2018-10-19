@@ -29,6 +29,10 @@ abstract public class PlugsTrigger implements PlugsSensorManager.PlugsSensorEven
     }
 
     public void doTrigger(QueueTrigger trigger) {
+        for (int i = 0; i < triggerListeners.size(); i++) {
+            TriggerListener listener = triggerListeners.get(i);
+            handlers.get(i).post(()->listener.onTrigger(trigger));
+        }
         Queue.push(trigger);
     }
 

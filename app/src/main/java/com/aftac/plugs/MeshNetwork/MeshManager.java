@@ -509,6 +509,25 @@ public class MeshManager {
     public static void send(String destination, int contentType, byte[] data) {
         if (destination.equals(DEVICE_ALL)) {
             // TODO: Send payload to all in mesh group
+
+            for (MeshDevice device : myMeshGroup) {
+                if (device == null || device.id.equals("")) continue;
+
+                int headerLength = 12 + destination.length() + Queue.getName().length() + 2;
+                int length = headerLength;
+                if (data != null)
+                    length += data.length;
+                ByteBuffer buf = ByteBuffer.wrap(new byte[length]);
+                buf.putInt(headerLength);
+                buf.putInt(device.serialTx++);
+                buf.putInt(contentType);
+                buf.put(Queue.getName().getBytes()); buf.put((byte)0);
+                buf.put(destination.getBytes()); buf.put((byte)0);
+                if (data != null)
+                    buf.put(data);
+
+                connectionsClient.sendPayload(device.id, Payload.fromBytes(buf.array()));
+            }
         } else {
             Log.v(LOG_TAG, "Sending: " + destination + ", " + contentType);
             MeshDevice device = getDevice(destination);
