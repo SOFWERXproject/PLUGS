@@ -22,7 +22,7 @@
         android:icon="@mipmap/plugs_icon"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.AppCompat.NoActionBar">
+        android:theme="@style/Theme.Design.Light">
         <activity android:name=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -31,8 +31,7 @@
             </intent-filter>
         </activity>
         <activity android:name=".DebugActivities.DebugMenuActivity" />
-        <activity
-            android:name=".DebugActivities.MeshDebugActivity" />
+        <activity android:name=".DebugActivities.MeshDebugActivity" />
         <activity
             android:name=".DebugActivities.QueueDebugActivity"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
@@ -47,11 +46,6 @@
             android:exported="false"
             android:icon="@mipmap/plugs_icon"
             android:label="Queue" />
-
-        <activity android:name=".TriggersActivity" />
-        <activity android:name=".ActionsActivity" />
-        <activity android:name=".HomeStationActivity" />
-        <activity android:name=".GeneralActivity" />
     </application>
 
 </manifest>

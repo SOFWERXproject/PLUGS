@@ -1,0 +1,65 @@
+<resources>
+    <string name="title_activity_configuration">Configuration</string>
+
+    <!-- Strings related to Settings -->
+
+    <!-- General settings -->
+    <string name="pref_header_general">General</string>
+
+    <string name="pref_title_device_name">Device Name</string>
+    <string name="pref_default_device_name">PLUGS123</string>
+
+    <string name="pref_title_home_station">Home Station Address</string>
+    <string name="pref_default_home_station">0.0.0.0</string>
+
+    <string name="pref_title_deploy_timer">Deploy Timer Delay (seconds)</string>
+    <string name="pref_default_deploy_timer">15</string>
+
+    <string name="pref_title_self_clear">Automatic Self Clear</string>
+
+    <!-- Settings for Actions -->
+    <string name="pref_header_actions">Actions</string>
+
+
+
+    <!-- Settings for Triggers -->
+    <string name="pref_header_triggers">Triggers</string>
+    <string-array name="pref_trigger_microphone_titles">
+        <item>Off</item>
+        <item>Vehicle</item>
+        <item>Person</item>
+        <item>Conversations</item>
+        <item>Environment</item>
+    </string-array>
+    <string-array name="pref_trigger_microphone_values">
+        <item>0</item>
+        <item>25</item>
+        <item>50</item>
+        <item>75</item>
+        <item>100</item>
+    </string-array>
+
+    <string-array name="pref_trigger_accelerometer_titles">
+        <item>Off</item>
+        <item>Vehicle</item>
+        <item>Person</item>
+        <item>Conversations</item>
+        <item>Environment</item>
+    </string-array>
+    <string-array name="pref_trigger_accelerometer_values">
+        <item>0</item>
+        <item>25</item>
+        <item>50</item>
+        <item>75</item>
+        <item>100</item>
+    </string-array>
+
+    <!-- Sensor name strings -->
+    <string name="pref_sensor_accelerometer">Accelerometer</string>
+    <string name="pref_sensor_camera">Camera</string>
+    <string name="pref_sensor_microphone">Microphone</string>
+    <string name="pref_sensor_photo">Photo</string>
+    <string name="pref_sensor_video">Video</string>
+
+
+</resources>

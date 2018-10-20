@@ -1,0 +1,30 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+    <android.support.v7.preference.SeekBarPreference
+        android:key="keyName"
+        android:title="Property Label"
+        android:summary="Summary."
+        android:max="5"
+        android:defaultValue="0" />
+    -->
+
+    <ListPreference
+        android:defaultValue="50"
+        android:entries="@array/pref_trigger_accelerometer_titles"
+        android:entryValues="@array/pref_trigger_accelerometer_values"
+        android:key="pref_trigger_accelerometer"
+        android:negativeButtonText="@null"
+        android:positiveButtonText="@null"
+        android:title="@string/pref_sensor_accelerometer" />
+
+    <ListPreference
+        android:defaultValue="50"
+        android:entries="@array/pref_trigger_microphone_titles"
+        android:entryValues="@array/pref_trigger_microphone_values"
+        android:key="pref_trigger_microphone"
+        android:negativeButtonText="@null"
+        android:positiveButtonText="@null"
+        android:title="@string/pref_sensor_microphone" />
+
+</PreferenceScreen>

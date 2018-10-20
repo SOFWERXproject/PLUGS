@@ -1,0 +1,18 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <SwitchPreference
+        android:defaultValue="false"
+        android:key="action_video"
+        android:title="@string/pref_sensor_video" />
+
+    <SwitchPreference
+        android:defaultValue="false"
+        android:key="action_photo"
+        android:title="@string/pref_sensor_photo" />
+
+    <SwitchPreference
+        android:defaultValue="false"
+        android:key="action_microphone"
+        android:title="@string/pref_sensor_microphone" />
+
+</PreferenceScreen>
