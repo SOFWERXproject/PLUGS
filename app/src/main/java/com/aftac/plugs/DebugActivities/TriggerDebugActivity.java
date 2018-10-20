@@ -5,22 +5,11 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
-import android.view.animation.AlphaAnimation;
 import android.widget.TextView;
 
-import com.aftac.plugs.Queue.Queue;
-import com.aftac.plugs.Queue.QueueCommand;
-import com.aftac.plugs.Queue.QueueTrigger;
 import com.aftac.plugs.R;
 import com.aftac.plugs.Sensors.PlugsSensorEvent;
 import com.aftac.plugs.Sensors.PlugsSensorManager;
-import com.aftac.plugs.Triggers.MagnitudeTrigger;
-import com.aftac.plugs.Triggers.PlugsTrigger;
-
-import org.json.JSONArray;
-
-import java.util.Arrays;
 
 public class TriggerDebugActivity extends AppCompatActivity implements
         PlugsSensorManager.PlugsSensorEventListener {
