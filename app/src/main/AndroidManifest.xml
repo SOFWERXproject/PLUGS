@@ -46,10 +46,6 @@
             android:exported="false"
             android:icon="@mipmap/plugs_icon"
             android:label="Queue" />
-
-        <activity
-            android:name=".ConfigurationActivity"
-            android:label="@string/title_activity_configuration"></activity>
     </application>
 
 </manifest>
