@@ -2,6 +2,24 @@ package com.aftac.lib.preferences;
 
 /**
  * Created by Josh Van Horne on 3/14/2018.
+ *
+ * Attributes
+ *  android:id
+ *      id of view object
+ *  android:title
+ *      Title of setting shown to user
+ *  android:key
+ *      Key string for setting in settings file
+ *  android:summary
+ *      Summary of setting shown to user
+ *  android:gravity
+ *      Gravity of setting text in input field (right, left, center)
+ *  android:inputType
+ *      Input method type (reference: https://developer.android.com/training/keyboard-input/style)
+ *  android:defaultValue
+ *      The default value of the setting
+ *  unit:
+ *      String shown to user at the end of the input field.
  */
 
 import android.content.Context;
