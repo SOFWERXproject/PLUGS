@@ -213,7 +213,14 @@ public class Queue extends Service {
 
                 break;
                 case ITEM_TYPE_TRIGGER:
-                    processTrigger((QueueTrigger) content);
+                    QueueTrigger trigger = (QueueTrigger)content;
+
+                    if (trigger.source.equals(myName)) {
+                        MeshManager.send(MeshManager.DEVICE_ALL, MeshManager.CONTENT_TRIGGER,
+                                trigger.toBytes());
+                    }
+
+                    processTrigger(trigger);
                 break;
             }
             return true;
@@ -230,6 +237,12 @@ public class Queue extends Service {
         //if command exists for trigger {
         //    processCommand(triggerCommand);
         //}
+
+        Toast toast = Toast.makeText(me.getBaseContext(), "Trigger from: " + trigger.getSource(),
+                Toast.LENGTH_SHORT);
+
+        mainHandler.post(toast::show);
+
     }
 
     // Processes commands sent to the Queue

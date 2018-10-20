@@ -3,30 +3,27 @@ package com.aftac.plugs.Sensors;
 import android.content.Context;
 import android.hardware.Sensor;
 import android.hardware.SensorManager;
-import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
-import android.os.Looper;
-import android.os.Message;
 import android.util.Log;
+import android.util.SparseArray;
 
 import com.aftac.plugs.Queue.Queue;
 
 import org.json.JSONArray;
 
-import java.lang.ref.WeakReference;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.List;
 
 public class PlugsSensorManager {
-    private static final String LOG_TAG = PlugsSensorManager.class.getSimpleName();
+    static final String LOG_TAG = PlugsSensorManager.class.getSimpleName();
     public static final int COMMAND_GET_SENSORS = 0;
+
+    public static final int STANDARD_ANDROID_SENSOR_MASK = 0x80000000;
 
     private static int LIST_INITIAL_SIZE = 5;
     private static int LIST_GROW_SIZE = 5;
 
-    static final int STANDARD_ANDROID_SENSOR_MASK = 0x80000000;
+
 
     private static String className = PlugsSensorManager.class.getName();
     private static SensorManager sensorManager = null;
@@ -36,12 +33,12 @@ public class PlugsSensorManager {
     private static HandlerThread workThread = null;
     private static Handler workHandler = null;
 
-    private static PlugsSensorWrapper[] sensorWrappers = null;
+    private static SparseArray<SparseArray> sensorWrapperLists= new SparseArray<>();
 
 
 
     // Public interface to listen for data events from the PlugsSensorWrapper
-    interface PlugsSensorEventListener {
+    public interface PlugsSensorEventListener {
         void onPlugsSensorEvent(PlugsSensorEvent event);
     }
 
@@ -55,10 +52,10 @@ public class PlugsSensorManager {
         sensorThread.start();
         sensorHandler = new Handler(sensorThread.getLooper());
 
-        // Thread for work on sensor events
+        // Default thread for work on sensor events
         workThread = new HandlerThread(className, Thread.NORM_PRIORITY);
         workThread.start();
-        workHandler = new Handler(sensorThread.getLooper(), workHandlerCallback);
+        workHandler = new Handler(sensorThread.getLooper());
     }
 
     @Queue.Command(COMMAND_GET_SENSORS)
@@ -72,148 +69,57 @@ public class PlugsSensorManager {
         return ret;
     }
 
-    // Creates a listener for a sensor, and returns an id to reference it by later
-    public static int initSensor(int type, int index) {
-        Sensor sensor = null;
-        List<Sensor> list = sensorManager.getSensorList(type);
-
-        if (list == null || list.size() <= index)
-            return -1;
-        else return createSensorListener(list.get(index));
-    }
-    public static int initSensor(int type) {
-        return createSensorListener(sensorManager.getDefaultSensor(type));
-    }
-
-    // Start reading data from a sensor
-    public static boolean startSensor(int id) {
-        if (id >= sensorWrappers.length) return false;
-        PlugsSensorWrapper wrapper = sensorWrappers[id];
-        synchronized (wrapper) { return sensorWrappers[id].start(); }
-    }
-
-    // Stop reading data from a sensor
-    public static void stopSensor(int id) {
-        if (id >= sensorWrappers.length) return;
-        PlugsSensorWrapper wrapper = sensorWrappers[id];
-        synchronized (wrapper) { sensorWrappers[id].stop(); }
-    }
-
-    // Free a sensor wrapper
-    public static void freeSensor(int id) {
-        if (id >= sensorWrappers.length) return;
-        PlugsSensorWrapper wrapper = sensorWrappers[id];
-        synchronized (wrapper) { sensorWrappers[id].free(); }
-    }
-
-    public static boolean isSensorRunning(int id) {
-        return ((id < sensorWrappers.length) && sensorWrappers[id].isRunning());
-    }
-
     // Add a listener to a plugs sensor's data events
-    public static void addSensorEventListener(int sensorId, PlugsSensorEventListener listener,
-                                      Handler handler) {
-        if (sensorId < sensorWrappers.length) {
-            PlugsSensorWrapper wrapper = sensorWrappers[sensorId];
-            synchronized (wrapper.listeners) { synchronized (wrapper) {
-                if (!wrapper.isFree()) {
-                    sensorWrappers[sensorId].listeners.add(
-                            new PlugsSensorEventListenerCallback(listener, handler));
-                }
-            } }
-        }
+    public static void addSensorEventListener(int type, int index,
+                                              PlugsSensorEventListener listener, Handler handler) {
+        PlugsSensorWrapper sensor = getSensor(type, index);
+        if (!sensor.isRunning()) sensor.start();
+        sensor.addEventListener(listener, handler);
     }
-    public static void addSensorEventListener(int sensorId, PlugsSensorEventListener listener) {
-        addSensorEventListener(sensorId, listener, new Handler(Looper.myLooper()));
+    public static void addSensorEventListener(int type, PlugsSensorEventListener listener,
+                                      Handler handler) {
+        addSensorEventListener(type, -1, listener, handler);
+    }
+    public static void addSensorEventListener(int type, int index,
+                                              PlugsSensorEventListener listener) {
+        addSensorEventListener(type, index, listener, workHandler);
+    }
+    public static void addSensorEventListener(int type, PlugsSensorEventListener listener) {
+        addSensorEventListener(type, -1, listener, workHandler);
     }
 
     // Remove a data event listener from a plug sensor
-    public static void removeSensorEventListener(int sensorId, PlugsSensorEventListener listener) {
-        if (sensorId < sensorWrappers.length) {
-            PlugsSensorWrapper wrapper = sensorWrappers[sensorId];
-            synchronized (wrapper.listeners) {
-                sensorWrappers[sensorId].listeners.remove(listener);
-            }
-        }
+    public static void removeSensorEventListener(int type, int index, PlugsSensorEventListener listener) {
+        PlugsSensorWrapper sensor = getSensor(type, index);
+
+        sensor.removeEventListener(listener);
+        if (sensor.listeners.size() <= 0) sensor.stop();
     }
 
 
     // Privates
+    private static PlugsSensorWrapper getSensor(int type, int index) {
+        SparseArray<PlugsSensorWrapper> subList;
+        PlugsSensorWrapper sensor;
 
-    static class PlugsSensorEventListenerCallback {
-        WeakReference<PlugsSensorEventListener> listenerRef;
-        Handler handler;
-        PlugsSensorEventListenerCallback(PlugsSensorEventListener listener, Handler handler) {
-            this.listenerRef = new WeakReference<>(listener);
-            this.handler = handler;
+        if (index == -1) index = getDefaultSensorIndex(type);
+        if ((subList = sensorWrapperLists.get(type)) == null) {
+            subList = new SparseArray<>();
+            sensorWrapperLists.put(type, subList);
         }
+        if ((sensor = subList.get(index)) == null) {
+            sensor = new PlugsSensorWrapper(sensorManager, type, index, sensorHandler, workHandler);
+            subList.put(index, sensor);
+        }
+
+        return sensor;
     }
 
-    // Creates a sensor listener, and returns it's id
-    private static int createSensorListener(Sensor sensor) {
-        int i, sensorId = -1;
-        // If the sensorWrappers array doesn't exist yet, create it
-        if (sensorWrappers == null) {
-            sensorWrappers = new PlugsSensorWrapper[LIST_INITIAL_SIZE];
-            sensorId = 0;
-        } else {
-            int length = sensorWrappers.length;
-
-            // Find an empty slot in the sensorWrappers array
-            // SensorListeners that have been freed can be reused too
-            for (i = 0; i < length; i++) {
-                if (sensorWrappers[i] == null) {
-                    sensorId = i;
-                    break;
-                } else if (sensorWrappers[i].isFree())
-                    sensorId = i;
-            }
-
-            // If no sensor Id was found, the list needs to be expanded
-            if (sensorId < 0) {
-                // Create a new array with an additional 10 slots
-                PlugsSensorWrapper[] newArray = new PlugsSensorWrapper[length * LIST_GROW_SIZE];
-
-                // Copy the current sensorWrappers array into the new one, then swap to the new one
-                System.arraycopy(sensorWrappers, 0, newArray, 0, length);
-                sensorWrappers = newArray;
-
-                sensorId = length;
-                length *= 2;
-            }
-        }
-
-        // If the selected slot is null, create a listener for it
-        if (sensorWrappers[sensorId] == null) {
-            sensorWrappers[sensorId] = new PlugsSensorWrapper(sensorManager, sensorId,
-                    sensorHandler, workHandler);
-        }
-
-        // Set the sensor listener's sensor
-        sensorWrappers[sensorId].setSensor(sensor);
-
-        return sensorId;
+    private static int getDefaultSensorIndex(int type) {
+        int index = -1;
+        List<Sensor> androidSensors = sensorManager.getSensorList(type);
+        Sensor defaultSensor = sensorManager.getDefaultSensor(type);
+        while (androidSensors.get(++index) != defaultSensor);
+        return index;
     }
-
-    private static Handler.Callback workHandlerCallback = new Handler.Callback() {
-        @Override
-        public boolean handleMessage(Message msg) {
-            Bundle bundle = msg.getData();
-            int sensorId = bundle.getInt("sensorId");
-            PlugsSensorWrapper wrapper = sensorWrappers[sensorId];
-
-            synchronized (wrapper.listeners) {
-                ByteBuffer data = ByteBuffer.wrap(msg.getData().getByteArray("data"));
-                PlugsSensorEvent event = new PlugsSensorEvent(data);
-
-                data.order(ByteOrder.LITTLE_ENDIAN);
-                for (PlugsSensorEventListenerCallback listenerCallback : wrapper.listeners) {
-                    listenerCallback.handler.post(() ->
-                                listenerCallback.listenerRef.get().onPlugsSensorEvent(event));
-                }
-            }
-
-            return false;
-        }
-    };
 }

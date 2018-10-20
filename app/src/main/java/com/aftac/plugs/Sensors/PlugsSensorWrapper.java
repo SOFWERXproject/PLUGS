@@ -4,9 +4,9 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.os.Bundle;
 import android.os.Handler;
-import android.os.Message;
+import android.os.SystemClock;
+import android.util.Log;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -15,35 +15,34 @@ import java.util.List;
 
 // A wrapper class for reading Android sensors
 class PlugsSensorWrapper implements SensorEventListener {
-    private int id;
     private SensorManager sensorManager;
     private Sensor sensor;
-    private int sensorType;
+    private int type;
+    private int index;
     private Handler sensorHandler;
     private Handler workHandler;
-    final List<PlugsSensorManager.PlugsSensorEventListenerCallback> listeners = new ArrayList<>();
+    final List<PlugsSensorManager.PlugsSensorEventListener> listeners = new ArrayList<>();
+    final List<Handler> handlers = new ArrayList<>();
 
     private volatile boolean running = false;
-    private volatile boolean nulled = true;
+    private volatile boolean nulled = false;
+    private long bestMilliOffset = Long.MAX_VALUE;
 
     boolean isRunning() { return running; }
     boolean isFree() { return nulled; }
-    Sensor getSensor() { return sensor; }
+    //Sensor getSensor() { return sensor; }
 
 
-    PlugsSensorWrapper(SensorManager sensorManager, int id, Handler sensorHandler,
+    PlugsSensorWrapper(SensorManager sensorManager, int type, int index, Handler sensorHandler,
                        Handler workHandler) {
-        this.id = id;
+        this.type = type;
+        this.index = index;
         this.sensorManager = sensorManager;
         this.sensorHandler = sensorHandler;
         this.workHandler = workHandler;
-    }
 
-    // Set the sensor to wrap
-    void setSensor(Sensor sensor) {
-        if (!nulled) free();
-        this.sensor = sensor;
-        this.sensorType = sensor.getType();
+        List<Sensor> sensors = sensorManager.getSensorList(type);
+        this.sensor = sensors.get(index);
     }
 
     // Start reading data from a sensor
@@ -65,67 +64,78 @@ class PlugsSensorWrapper implements SensorEventListener {
     void free() {
         synchronized (listeners) { synchronized (this) {
             if (running) stop();    // Stop before freeing
+            while (listeners.size() > 0) {
+                listeners.remove(0);
+                handlers.remove(0);
+            }
             sensor = null;        // To allow garbage collection
-            while (listeners.size() > 0) listeners.remove(0);
+            sensorManager = null;
+            sensorHandler = null;
             nulled = true;
         } }
+    }
+
+    void addEventListener(PlugsSensorManager.PlugsSensorEventListener listener, Handler handler) {
+        if (!nulled && !listeners.contains(listener)) {
+            listeners.add(listener);
+            handlers.add(handler);
+        }
+    }
+
+    void removeEventListener(PlugsSensorManager.PlugsSensorEventListener listener) {
+        int index = listeners.indexOf(listener);
+        listeners.remove(index);
+        handlers.remove(index);
     }
 
     @Override
     public void onSensorChanged(SensorEvent event) {
         if (listeners.size() == 0) return;
 
-        // TODO: Change to use PLUGS mesh network timestamp
-        long utcTimestamp = System.currentTimeMillis();
-
         // Sometimes Android holds on to sensor events for a while before sending them to apps
         // we have to adjust our timestamp to compensate for this.
-            /*
-            long milliOffset = (event.timestamp / 1000000) - SystemClock.elapsedRealtime();
-            if (milliOffset < bestMilliOffset)
-                bestMilliOffset = milliOffset;
-            utcTimestamp -= milliOffset - bestMilliOffset;
-            */
-        
+        long milliOffset = (event.timestamp / 1000000) - SystemClock.elapsedRealtime();
+        if (milliOffset < bestMilliOffset)
+            bestMilliOffset = milliOffset;
+
+        // TODO: Change to use PLUGS mesh network timestamp
+        final long utcTimestamp = System.currentTimeMillis() - (milliOffset - bestMilliOffset);
+
         // Create a byte array to hold the sensor event data
         byte[] data;
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
-            data = new byte[Integer.BYTES * 3
-                          + Long.BYTES    * 2
-                          + Float.BYTES   * event.values.length];
-        } else {
-            data = new byte[  4 * 3                     // sizeof(int) * 3
-                            + 8 * 2                     // sizeof(long) * 2
-                            + 4 * event.values.length]; // sizeof(float) * event.values.length
-        }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N)
+            data = new byte[Float.BYTES * event.values.length];
+        else
+            data = new byte[+ 4 * event.values.length];
 
         // Create a ByteBuffer to hold the sensor event data
-        ByteBuffer buf = ByteBuffer.wrap(data);
+        final ByteBuffer buf = ByteBuffer.wrap(data);
         buf.order(ByteOrder.LITTLE_ENDIAN);
-        buf.mark();
-        
-        // Write the sensor event data into the ByteBuffer
-        buf.putInt(id | 0x80000000); // The 0x80000000 is to mark this as a standard Android sensor
-        buf.putInt(sensorType);
-        buf.putLong(event.timestamp);
-        buf.putLong(utcTimestamp);
-        buf.putInt(event.accuracy);
         // Use slice to get a reference sharing the same buffer starting at it's current position
         // then use it as a FloatBuffer to write the values float array into it.
-        buf.slice().asFloatBuffer().put(event.values);
-        
-        // Reset buffer position
-        buf.reset();
-        
-        // Create a bundle to hold the data array
-        Bundle bundle = new Bundle();
-        bundle.putInt("sensorId", id);
-        bundle.putByteArray("data", data);
-        
-        // Package the bundle into a message, and send it to the work handler
-        Message msg = new Message();
-        msg.setData(bundle); msg.what = 0;
-        workHandler.sendMessage(msg);
+        buf.clear();
+        buf.asFloatBuffer().put(event.values);
+
+        workHandler.post(()-> {
+            buf.rewind();
+            index |= PlugsSensorManager.STANDARD_ANDROID_SENSOR_MASK;
+            // Create a PlugsSensorEvent
+            PlugsSensorEvent thisEvent = new PlugsSensorEvent(utcTimestamp,
+                    index | PlugsSensorManager.STANDARD_ANDROID_SENSOR_MASK,
+                    type, event.accuracy, buf);
+
+            for (int i = 0; i < listeners.size(); i++) {
+                PlugsSensorManager.PlugsSensorEventListener listener = listeners.get(i);
+                Handler handler = handlers.get(i);
+                if (handler == workHandler) {
+                    listener.onPlugsSensorEvent(thisEvent);
+                } else {
+                    handler.post(() -> {
+                        listener.onPlugsSensorEvent(thisEvent);
+                    });
+                }
+            }
+        });
     }
 
     @Override
