@@ -26,6 +26,8 @@ public class GpsService {
     static double latitude  = 0;
     static double longitude = 0;
     static double clockMultiplier  = 1.0;
+    static double maxFluctuation = -1;
+    static double fluctuation = -1;
     static long lastTimeStampNanos = 0;
     static long lastTimeStamp = 0;
 
@@ -86,8 +88,21 @@ public class GpsService {
                 long elapsedTime = timestampUTC - lastTimeStamp;
                 long elapsedNanos = timestampNanos - lastTimeStampNanos;
                 double multiplier = elapsedTime / (elapsedNanos / 1000000.0d);
-                Log.v(LOG_TAG, "GPS Time multiplier = " + multiplier + ", " + elapsedTime + ", " + elapsedNanos);
-                clockMultiplier = (clockMultiplier * 0.99d + multiplier * 0.01d);
+                if (maxFluctuation >= 0) {
+                    clockMultiplier = (clockMultiplier * 0.99d + multiplier * 0.01d);
+                    fluctuation = Math.abs(clockMultiplier - multiplier);
+                    if (fluctuation > maxFluctuation)
+                        maxFluctuation = fluctuation;
+                    Log.v(LOG_TAG, "GPS Time multiplier = " + multiplier + ", " + elapsedTime + ", " + elapsedNanos);
+                    Log.v(LOG_TAG, "GPS Time maximum Fluctuation = "
+                            + (maxFluctuation * 100) + "%");
+                    Log.v(LOG_TAG, "GPS Time Flux = "
+                            + (fluctuation * 100) + "%");
+                } else {
+                    clockMultiplier = multiplier;
+                    maxFluctuation = 0;
+                    fluctuation = 0;
+                }
             }
 
             latitude = location.getLatitude();
