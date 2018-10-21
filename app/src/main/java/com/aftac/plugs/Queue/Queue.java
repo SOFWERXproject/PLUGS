@@ -2,18 +2,23 @@ package com.aftac.plugs.Queue;
 
 import android.app.Service;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Message;
+import android.preference.PreferenceManager;
 import android.util.Log;
 import android.util.SparseArray;
 import android.widget.Toast;
 
+import com.aftac.plugs.Gps.GpsService;
 import com.aftac.plugs.MeshNetwork.MeshManager;
 import com.aftac.plugs.MeshNetwork.MeshManager.MeshStatusChangedListener;
+import com.aftac.plugs.PlugsNotification;
+import com.aftac.plugs.R;
 import com.aftac.plugs.Sensors.PlugsSensorManager;
 
 import org.json.JSONArray;
@@ -27,6 +32,7 @@ import java.lang.annotation.Target;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.nio.ByteBuffer;
 
 public class Queue extends Service {
     static final String LOG_TAG =  Queue.class.getSimpleName();
@@ -42,12 +48,14 @@ public class Queue extends Service {
     public final static int COMMAND_CLASS_BASE_COMM = 4;
 
 
-    public static final int COMMAND_MISC_STOP_QUEUE = 1;
-    public final static int COMMAND_MISC_POKE       = 100;
+    public static final int COMMAND_MISC_STOP = 1;
+    public final static int COMMAND_MISC_POKE = 100;
 
     static final int ITEM_TYPE_NONE = 0;
     static final int ITEM_TYPE_COMMAND = 1;
     static final int ITEM_TYPE_TRIGGER = 2;
+
+    private static PlugsNotification notification;
 
     private static HandlerThread workThread;
     static Handler mainHandler;
@@ -57,16 +65,17 @@ public class Queue extends Service {
     private static SparseArray<Method> sensorCommands;
     private static SparseArray<Method> meshCommands;
 
-    private static Queue me;
+    private static SharedPreferences prefs;
 
+    private static Queue me;
     private static String myName = "Plugs-";
     volatile private static Boolean running = false;
     private static boolean initialized = false;
 
 
+
     public static String setName(String name) { return myName = name; }
     public static String getName() { return myName; }
-
 
     static abstract class QueueItem implements Serializable{
         abstract int getType();
@@ -118,15 +127,22 @@ public class Queue extends Service {
         if (!initialized) {
             initialized = true;
 
+            // Create a notification to keep this service running in the background
+            PlugsNotification notification = new PlugsNotification(getBaseContext());
+            startForeground(notification.getId(), notification.get());
+
             // Get a handler for the main thread
             mainHandler = new Handler(getMainLooper());
 
-            // Create a work thread and handler for the Queue service
+            // Create a new work thread and handler for it
             workThread = new HandlerThread(getClass().getName(), Thread.MAX_PRIORITY);
             workThread.start();
             workHandler = new Handler(workThread.getLooper(), workCallback);
 
-            // TODO: startForeground(id, notification);
+            prefs = PreferenceManager.getDefaultSharedPreferences(this);
+            prefs.registerOnSharedPreferenceChangeListener(prefsListener);
+
+            loadPreferences();
 
             // Do the rest of the initialization in the work thread
             workHandler.post(this::init);
@@ -152,9 +168,10 @@ public class Queue extends Service {
     private void init() {
         MeshManager.init(this);
         PlugsSensorManager.init(this.getBaseContext());
+        GpsService.init(this.getBaseContext());
 
         int id = (int) (Math.random() * Integer.MAX_VALUE);
-        myName += Integer.toHexString(id & 0xFFFF);
+        //myName += Integer.toHexString(id & 0xFFFF);
 
         // Populate the command lists in the work thread
         workHandler.post(() -> {
@@ -171,9 +188,9 @@ public class Queue extends Service {
         if (intent != null) {
             Bundle bundle = intent.getExtras();
             if (bundle != null) {
-                Message msg = new Message();
-                msg.setData(bundle);
-                workHandler.sendMessage(msg);
+                ByteBuffer buffer = ByteBuffer.wrap(bundle.getByteArray("content"));
+                QueueCommand command = new QueueCommand(buffer, true);
+                push(command);
             }
         }
     }
@@ -328,15 +345,11 @@ public class Queue extends Service {
     // Custom annotation to mark queue commands
     @Retention(RetentionPolicy.RUNTIME)
     @Target(ElementType.METHOD)
-    public @interface Command {
-        int value();
-    }
+    public @interface Command { int value(); }
 
     // Queue command to stop the Queue service
-    @Queue.Command(COMMAND_MISC_STOP_QUEUE)
-    static void stopCommand() {
-        me.stopAndQuit();
-    }
+    @Queue.Command(COMMAND_MISC_STOP)
+    static void stopCommand() { me.stopAndQuit(); }
 
     // Makes a list of methods from a class that have the Queue.addCommand annotation
     private SparseArray<Method> getQueueCommands(Class src) {
@@ -374,4 +387,29 @@ public class Queue extends Service {
         }
         return arr;
     }
+
+    private static void loadPreferences() {
+        // Load name if a setting exists, otherwise generate a random name
+        if (prefs.contains("general_device_name")) {
+            setName(prefs.getString("general_device_name",
+                    me.getString(R.string.pref_default_device_name)));
+        } else {
+            int id = (int) (Math.random() * Integer.MAX_VALUE);
+            myName = "Plugs-" + Integer.toHexString(id & 0xFFFF);
+            prefs.edit()
+                    .putString("general_device_name", myName)
+                    .commit();
+        }
+    }
+
+    private static SharedPreferences.OnSharedPreferenceChangeListener prefsListener =
+                new SharedPreferences.OnSharedPreferenceChangeListener() {
+        @Override
+        public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+            if (key.equals("general_device_name")) {
+                setName(prefs.getString("general_device_name",
+                        me.getString(R.string.pref_default_device_name)));
+            }
+        }
+    };
 }

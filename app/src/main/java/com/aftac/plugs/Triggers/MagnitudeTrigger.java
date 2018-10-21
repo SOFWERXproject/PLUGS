@@ -50,7 +50,7 @@ public class MagnitudeTrigger extends PlugsTrigger {
                 ByteBuffer data = ByteBuffer.wrap(new byte[Float.BYTES]);
                 data.asFloatBuffer().put(magnitude);
 
-                doTrigger(new QueueTrigger(event.timestamp, sensorType, sensorIndex,
+                doTrigger(new QueueTrigger(event.gpsTimestamp, sensorType, sensorIndex,
                         data));
 
             }

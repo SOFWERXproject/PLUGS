@@ -5,6 +5,7 @@ import android.app.Application;
 
 public class Plugs extends Application {
     public static final String[] permissionsNeeded = new String[]{
+            Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION,
             Manifest.permission.BLUETOOTH,
             Manifest.permission.BLUETOOTH_ADMIN,

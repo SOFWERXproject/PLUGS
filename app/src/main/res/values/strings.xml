@@ -3,4 +3,5 @@
     <string name="empty"></string>
     <string name="yes">yes</string>
     <string name="no">no</string>
+    <string name="notification_text">The PLUGS queue service is running</string>
 </resources>

@@ -13,13 +13,15 @@ public class PlugsSensorEvent {
     public int     sensorType;
     public int     sensorIndex;
     public boolean standardSensor;
-    public long    timestamp;
+    public long    gpsTimestamp;
+    public long    systemTimestamp;
     public int     accuracy;
     public float[] values;
 
-    PlugsSensorEvent(long timestamp, int sensorIndex, int sensorType, int accuracy,
+    PlugsSensorEvent(long gpsTimestamp, long systemTimestamp, int sensorIndex, int sensorType, int accuracy,
                      ByteBuffer data){
-        this.timestamp = timestamp;
+        this.gpsTimestamp = gpsTimestamp;
+        this.systemTimestamp = systemTimestamp;
         this.sensorIndex = sensorIndex;
         this.sensorType = sensorType;
         this.accuracy = accuracy;
@@ -41,7 +43,8 @@ public class PlugsSensorEvent {
         standardSensor = ((sensorType & PlugsSensorManager.STANDARD_ANDROID_SENSOR_MASK) != 0);
         sensorIndex &= ~PlugsSensorManager.STANDARD_ANDROID_SENSOR_MASK;
         sensorType = data.getInt();
-        timestamp = data.getLong();
+        gpsTimestamp = data.getLong();
+        systemTimestamp = data.getLong();
         accuracy = data.getInt();
         
         if (standardSensor) {

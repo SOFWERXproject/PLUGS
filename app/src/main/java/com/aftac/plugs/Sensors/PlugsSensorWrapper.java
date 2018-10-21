@@ -8,6 +8,8 @@ import android.os.Handler;
 import android.os.SystemClock;
 import android.util.Log;
 
+import com.aftac.plugs.Gps.GpsService;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
@@ -26,6 +28,7 @@ class PlugsSensorWrapper implements SensorEventListener {
 
     private volatile boolean running = false;
     private volatile boolean nulled = false;
+    private long bestNanoOffset = Long.MAX_VALUE;
     private long bestMilliOffset = Long.MAX_VALUE;
 
     boolean isRunning() { return running; }
@@ -90,16 +93,25 @@ class PlugsSensorWrapper implements SensorEventListener {
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-        if (listeners.size() == 0) return;
-
         // Sometimes Android holds on to sensor events for a while before sending them to apps
         // we have to adjust our timestamp to compensate for this.
-        long milliOffset = (event.timestamp / 1000000) - SystemClock.elapsedRealtime();
+        long nanos = SystemClock.elapsedRealtimeNanos();
+        long millis = SystemClock.elapsedRealtime();
+        long nanoOffset = event.timestamp - nanos;
+        long milliOffset = (event.timestamp / 1000000) - millis;
+        if (nanoOffset < bestNanoOffset)
+            bestNanoOffset = nanoOffset;
         if (milliOffset < bestMilliOffset)
             bestMilliOffset = milliOffset;
+        nanos -= bestNanoOffset;
+        millis -= bestMilliOffset;
 
-        // TODO: Change to use PLUGS mesh network timestamp
-        final long utcTimestamp = System.currentTimeMillis() - (milliOffset - bestMilliOffset);
+        // Get the GPS adjusted timestamp
+        final long gpsTimestamp = GpsService.getAdjustedUtcTime(nanos);
+        final long systemTimestamp = millis;
+
+        // No listeners? Nothing to do
+        if (listeners.size() == 0) return;
 
         // Create a byte array to hold the sensor event data
         byte[] data;
@@ -120,7 +132,7 @@ class PlugsSensorWrapper implements SensorEventListener {
             buf.rewind();
             index |= PlugsSensorManager.STANDARD_ANDROID_SENSOR_MASK;
             // Create a PlugsSensorEvent
-            PlugsSensorEvent thisEvent = new PlugsSensorEvent(utcTimestamp,
+            PlugsSensorEvent thisEvent = new PlugsSensorEvent(gpsTimestamp, systemTimestamp,
                     index | PlugsSensorManager.STANDARD_ANDROID_SENSOR_MASK,
                     type, event.accuracy, buf);
 

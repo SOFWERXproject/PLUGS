@@ -28,19 +28,30 @@ public class QueueCommand extends Queue.QueueItem {
         this.args = arguments;
     }
 
-    public QueueCommand(ByteBuffer buffer) {
+    public QueueCommand(ByteBuffer buffer, boolean fromIntent) {
         super();
-        byte chr;
+        fromBytes(buffer, fromIntent);
+    }
+    public QueueCommand(ByteBuffer buffer) {
+        fromBytes(buffer, false);
+    }
 
+
+
+    public String getSource() { return source; }
+    public String getTarget() { return target; }
+
+    public void fromBytes(ByteBuffer buffer, boolean fromIntent) {
+        byte chr;
         try {
             source = ""; while ((chr = buffer.get()) != 0) { source += (char)chr; }
             target = ""; while ((chr = buffer.get()) != 0) { target += (char)chr; }
         } catch (Exception e) { e.printStackTrace(); }
 
-        // Don't accept byte arrays where source/target = self
+        // If the byte buffer didn't come from an intent reject the source/target being "self"
         String myId = Queue.getName();
-        if (!myId.equals("")
-                    && (target.equals(Queue.COMMAND_TARGET_SELF) || source.equals(myId))) {
+        if (!fromIntent && !myId.equals("")
+                && (target.equals(Queue.COMMAND_TARGET_SELF) || source.equals(myId))) {
             source = Queue.COMMAND_TARGET_NONE;
             target = Queue.COMMAND_TARGET_NONE;
             return;
@@ -60,9 +71,6 @@ public class QueueCommand extends Queue.QueueItem {
             args = new JSONArray(strJSON);
         } catch (Exception e) { e.printStackTrace(); }
     }
-
-    public String getSource() { return source; }
-    public String getTarget() { return target; }
 
     public byte[] toBytes() {
         Log.v(Queue.LOG_TAG, "Command packed: " + source + ", " + target + ", "

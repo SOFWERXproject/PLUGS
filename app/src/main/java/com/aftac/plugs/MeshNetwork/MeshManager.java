@@ -83,6 +83,7 @@ public class MeshManager {
     private static final List<MeshDevice> availableDevices = new ArrayList<>();
     private static final List<MeshDevice> connectedDevices = new ArrayList<>();
 
+    private static MeshGroup myGroup;
     private static final List<MeshDevice> myMeshGroup = new ArrayList<>();
 
     private static boolean hasError = false;
@@ -108,7 +109,11 @@ public class MeshManager {
 
     public static void init(Context context) {
         // Only initialize once
-        if (isEnabled) return;
+        if (isEnabled) {
+            stopPeerDiscovery();
+            connectionsClient.stopAllEndpoints();
+            return;
+        }
         isEnabled = true;
 
         // Instance for non-static methods (all of which should be private)

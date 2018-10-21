@@ -31,12 +31,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        /*QueueCommand command = new QueueCommand(
-                Queue.COMMAND_TARGET_SELF,  // The target device's id in the mesh network
-                Queue.COMMAND_CLASS_MISC,   // Owner "class" of the command
-                Queue.COMMAND_MISC_STOP_QUEUE,    // The command id
-                null);
-        Queue.push(command);*/
     }
 
     public void gotoDebugMenu(View view) {
