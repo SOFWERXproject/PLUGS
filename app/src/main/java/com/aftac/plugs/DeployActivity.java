@@ -18,9 +18,7 @@ public class DeployActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_deploy);
-        //counterSetting = "30";
         prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        //prefs.registerOnSharedPreferenceChangeListener(prefsListener);
         counterSetting = prefs.getString("general_deploy_timer", "30");
         timerText = (TextView) findViewById(R.id.textViewCounter);
         timerText.setText(counterSetting);
