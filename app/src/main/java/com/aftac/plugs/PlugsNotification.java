@@ -69,7 +69,7 @@ public class PlugsNotification {
                 .setAutoCancel(false)
                 .setSmallIcon(R.mipmap.plugs_icon)
                 .setContentTitle(context.getString(R.string.app_name))
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
                 .setOngoing(true)
                 .setVisibility(Notification.VISIBILITY_PRIVATE)
                 .setContentText(context.getText(R.string.notification_text))

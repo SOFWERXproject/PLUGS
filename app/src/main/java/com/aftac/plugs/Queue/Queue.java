@@ -3,6 +3,7 @@ package com.aftac.plugs.Queue;
 import android.app.Service;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.hardware.Sensor;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -19,7 +20,11 @@ import com.aftac.plugs.MeshNetwork.MeshManager;
 import com.aftac.plugs.MeshNetwork.MeshManager.MeshStatusChangedListener;
 import com.aftac.plugs.PlugsNotification;
 import com.aftac.plugs.R;
+import com.aftac.plugs.Recorder.CameraHandler;
+import com.aftac.plugs.Recorder.RecordingManager;
 import com.aftac.plugs.Sensors.PlugsSensorManager;
+import com.aftac.plugs.Triggers.AudioTrigger;
+import com.aftac.plugs.Triggers.MagnitudeTrigger;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -33,6 +38,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.nio.ByteBuffer;
+import java.text.SimpleDateFormat;
 
 public class Queue extends Service {
     static final String LOG_TAG =  Queue.class.getSimpleName();
@@ -67,6 +73,9 @@ public class Queue extends Service {
 
     private static SharedPreferences prefs;
 
+    private static AudioTrigger audioTrigger;
+    private static MagnitudeTrigger magnitudeTrigger;
+
     private static Queue me;
     private static String myName = "Plugs-";
     volatile private static Boolean running = false;
@@ -79,7 +88,7 @@ public class Queue extends Service {
 
     static abstract class QueueItem implements Serializable{
         abstract int getType();
-        long timestamp;
+        long timestamp = GpsService.getUtcTime();
         String source = myName;
     }
 
@@ -142,8 +151,6 @@ public class Queue extends Service {
             prefs = PreferenceManager.getDefaultSharedPreferences(this);
             prefs.registerOnSharedPreferenceChangeListener(prefsListener);
 
-            loadPreferences();
-
             // Do the rest of the initialization in the work thread
             workHandler.post(this::init);
         }
@@ -169,6 +176,9 @@ public class Queue extends Service {
         MeshManager.init(this);
         PlugsSensorManager.init(this.getBaseContext());
         GpsService.init(this.getBaseContext());
+        CameraHandler.init();
+
+        loadPreferences();
 
         int id = (int) (Math.random() * Integer.MAX_VALUE);
         //myName += Integer.toHexString(id & 0xFFFF);
@@ -255,11 +265,21 @@ public class Queue extends Service {
         //    processCommand(triggerCommand);
         //}
 
-        Toast toast = Toast.makeText(me.getBaseContext(), "Trigger from: " + trigger.getSource(),
-                Toast.LENGTH_SHORT);
+        //if (deployed) {
+            if (prefs.getBoolean("action_video", false))
+                RecordingManager.recordVideo();
+            if (prefs.getBoolean("action_photo", false))
+                RecordingManager.takePicture();
+            if (prefs.getBoolean("action_microphone", false))
+                RecordingManager.recordAudio();
+        //}
+
+        SimpleDateFormat formater = new SimpleDateFormat("HH:mm:ss.SSS");
+
+        Toast toast = Toast.makeText(me.getBaseContext(), "Trigger from: " + trigger.getSource()
+                + " at " + formater.format(trigger.timestampUtc), Toast.LENGTH_SHORT);
 
         mainHandler.post(toast::show);
-
     }
 
     // Processes commands sent to the Queue
@@ -398,18 +418,82 @@ public class Queue extends Service {
             myName = "Plugs-" + Integer.toHexString(id & 0xFFFF);
             prefs.edit()
                     .putString("general_device_name", myName)
-                    .commit();
+                    .apply();
         }
+
+        setAccelerometerTrigger(Float.parseFloat(
+                prefs.getString("pref_trigger_accelerometer", "50")));
+
+        setAudioTrigger(Float.parseFloat(
+                prefs.getString("pref_trigger_microphone", "50")));
     }
 
     private static SharedPreferences.OnSharedPreferenceChangeListener prefsListener =
                 new SharedPreferences.OnSharedPreferenceChangeListener() {
         @Override
         public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
-            if (key.equals("general_device_name")) {
-                setName(prefs.getString("general_device_name",
-                        me.getString(R.string.pref_default_device_name)));
+            switch (key) {
+                case "general_device_name":
+                    setName(prefs.getString("general_device_name",
+                            me.getString(R.string.pref_default_device_name)));
+                break;
+                case "pref_trigger_accelerometer":
+                    //String[] strValues = me.getResources().getStringArray(R.array.pref_trigger_accelerometer_values);
+                    setAccelerometerTrigger(Float.parseFloat(
+                            prefs.getString("pref_trigger_accelerometer", "50")));
+                break;
+                case "pref_trigger_microphone":
+                    setAudioTrigger(Float.parseFloat(
+                            prefs.getString("pref_trigger_microphone", "50")));
+                break;
             }
         }
     };
+
+    private static void setAccelerometerTrigger(float value) {
+        if (value == 0) {
+            if (magnitudeTrigger != null) {
+                magnitudeTrigger.disable();
+                magnitudeTrigger.detach();
+                magnitudeTrigger = null;
+            }
+        } else {
+            if (magnitudeTrigger == null)
+                magnitudeTrigger = new MagnitudeTrigger(Sensor.TYPE_ACCELEROMETER);
+            magnitudeTrigger.setCalibration(9.8f);
+            switch ((int)value) {
+                case 25:  value = 0.1f;    break;
+                case 50:  value = 0.05f;   break;
+                case 75:  value = 0.025f;  break;
+                case 100: value = 0.0125f; break;
+            }
+
+            Log.v(LOG_TAG, "Accelerometer: " + value);
+            magnitudeTrigger.setSensitivity(value);
+            magnitudeTrigger.enable();
+        }
+    }
+
+    private static void setAudioTrigger(float value) {
+        if (value == 0) {
+            if (audioTrigger != null) {
+                audioTrigger.disable();
+                audioTrigger.detach();
+                audioTrigger = null;
+            }
+        } else {
+            if (audioTrigger == null)
+                audioTrigger = new AudioTrigger();
+
+            switch ((int)value) {
+                case 25:  value =  10f; break;
+                case 50:  value =   0f; break;
+                case 75:  value = -10f; break;
+                case 100: value = -20f; break;
+            }
+            Log.v(LOG_TAG, "Microphone: " + value);
+            audioTrigger.setSensitivity(value);
+            audioTrigger.enable();
+        }
+    }
 }

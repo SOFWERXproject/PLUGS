@@ -10,7 +10,7 @@ import com.aftac.plugs.Sensors.PlugsSensorManager;
 
 import java.util.ArrayList;
 
-abstract public class PlugsTrigger implements PlugsSensorManager.PlugsSensorEventListener {
+abstract public class PlugsTrigger {
     ArrayList<TriggerListener> triggerListeners = new ArrayList<>();
     ArrayList<Handler> handlers = new ArrayList<>();
 
@@ -36,6 +36,7 @@ abstract public class PlugsTrigger implements PlugsSensorManager.PlugsSensorEven
         Queue.push(trigger);
     }
 
-    @Override
-    public abstract void onPlugsSensorEvent(PlugsSensorEvent event);
+    abstract public void enable();
+    abstract public void disable();
+    abstract public void setSensitivity(float sensitivity);
 }

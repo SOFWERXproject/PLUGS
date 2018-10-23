@@ -60,6 +60,4 @@
     <string name="pref_sensor_microphone">Microphone</string>
     <string name="pref_sensor_photo">Photo</string>
     <string name="pref_sensor_video">Video</string>
-
-
 </resources>

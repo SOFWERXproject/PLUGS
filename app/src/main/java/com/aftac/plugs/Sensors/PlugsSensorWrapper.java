@@ -103,8 +103,8 @@ class PlugsSensorWrapper implements SensorEventListener {
             bestNanoOffset = nanoOffset;
         if (milliOffset < bestMilliOffset)
             bestMilliOffset = milliOffset;
-        nanos -= bestNanoOffset;
-        millis -= bestMilliOffset;
+        nanos -= (nanoOffset - bestNanoOffset);
+        millis -= (milliOffset - bestMilliOffset);
 
         // Get the GPS adjusted timestamp
         final long gpsTimestamp = GpsService.getAdjustedUtcTime(nanos);

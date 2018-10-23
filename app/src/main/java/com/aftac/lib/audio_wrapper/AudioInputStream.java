@@ -280,6 +280,10 @@ public class AudioInputStream implements Runnable {
         // Stop and release running stream
         if (running)
             stop();
+
+        if (running)
+            Log.v("AudioInputStream", "Failed to stop thread");
+
         audioReciever = null;
         outBuffer = null;
         inBuffer = null;
@@ -291,7 +295,9 @@ public class AudioInputStream implements Runnable {
     public void run() {
         int pos = 0;
         // Create a runnable to send notifications to the main thread
-        Runnable notificationRunnable = () -> audioReciever.onRecieveAudioNotification(bufferSize);
+        Runnable notificationRunnable = () -> {
+            if (running) audioReciever.onRecieveAudioNotification(bufferSize);
+        };
 
         stream.startRecording();
 

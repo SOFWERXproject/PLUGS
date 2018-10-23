@@ -10,6 +10,7 @@ import android.os.Bundle;
 
 import com.aftac.Plugs;
 import com.aftac.plugs.DebugActivities.DebugMenuActivity;
+import com.aftac.plugs.DebugActivities.MeshDebugActivity;
 import com.aftac.plugs.MeshNetwork.MeshManager;
 import com.aftac.plugs.Queue.Queue;
 import com.aftac.plugs.Queue.QueueCommand;
@@ -38,6 +39,11 @@ public class MainActivity extends AppCompatActivity {
         startActivity(intent);
     }
 
+    public void gotoNetwork(View view) {
+        Intent intent = new Intent(this, MeshDebugActivity.class);
+        startActivity(intent);
+    }
+
     public void gotoConfigure(View view) {
         // onClick action for Configure button in home screen
         Intent intent = new Intent(this, ConfigurationActivity.class);
@@ -45,7 +51,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void gotoDeploy(View view) {
-        // onClick action for Deploy button in home screen
+        // onClick action for deploy_button button in home screen
         Intent intent = new Intent(this, DeployActivity.class);
         startActivity(intent);
     }

@@ -13,7 +13,7 @@ public class WavRecorder implements AudioInputStream.AudioStreamReciever {
 
     private AudioInputStream audioStream;
     private BinaryFileOutputStream outFile;
-    private Object fileLock = new Object();
+    private final Object fileLock = new Object();
 
     private boolean stereo = false;
     private boolean recording = false;
@@ -49,7 +49,7 @@ public class WavRecorder implements AudioInputStream.AudioStreamReciever {
         // Open output file
         try {
             outFile = new BinaryFileOutputStream(filename,
-                                                 BinaryFileOutputStream.Endianness.BIG_ENDIAN);
+                                                 BinaryFileOutputStream.Endianness.LITTLE_ENDIAN);
             outFile.setLength(0); // Empty the file
         } catch (IOException exception) {
             if (Log.isLoggable(LOG_TAG, Log.DEBUG))
@@ -181,24 +181,20 @@ public class WavRecorder implements AudioInputStream.AudioStreamReciever {
         int bytesPerSample = channels * 2; // 16-bit encoding = 2 bytes
         int byteRate = sampleRate * bytesPerSample;
 
-        try {
-            // Write wav file header
-            outFile.setLength(0);
-            outFile.writeBytes("RIFF");
-            outFile.writeInt(0);      // RIFF block size (will be set when file is closed)
-            outFile.writeBytes("WAVE");
-            outFile.writeBytes("fmt "); // Format block
-            outFile.writeInt(16);     // Format block size
-            outFile.writeShort(1);    // PCM encoding
-            outFile.writeShort(channels);   // Channels (stereo/mono)
-            outFile.writeInt(sampleRate);
-            outFile.writeInt(byteRate);
-            outFile.writeShort(bytesPerSample);
-            outFile.writeShort(16);   // 16-bit PCM encoding
-            outFile.writeBytes("data"); // Data block
-            outFile.writeInt(0);      // Data block size (Will be set when file is closed)
-        } catch (IOException exception) {
-            throw exception;
-        }
+        // Write wav file header
+        outFile.setLength(0);
+        outFile.write("RIFF".getBytes());
+        outFile.writeInt(0);      // RIFF block size (will be set when file is closed)
+        outFile.write("WAVE".getBytes());
+        outFile.write("fmt ".getBytes()); // Format block
+        outFile.writeInt(16);     // Format block size
+        outFile.writeShort(1);    // PCM encoding
+        outFile.writeShort(channels);   // Channels (stereo/mono)
+        outFile.writeInt(sampleRate);
+        outFile.writeInt(byteRate);
+        outFile.writeShort(bytesPerSample);
+        outFile.writeShort(16);   // 16-bit PCM encoding
+        outFile.write("data".getBytes()); // Data block
+        outFile.writeInt(0);      // Data block size (Will be set when file is closed)
     }
 }

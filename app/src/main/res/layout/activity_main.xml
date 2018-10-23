@@ -19,33 +19,14 @@
         app:srcCompat="@drawable/lumia"
         android:contentDescription="TODO" />
 
-    <Button
-        android:id="@+id/buttonConfigure2"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginLeft="16dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginRight="16dp"
-        android:layout_marginBottom="16dp"
-        android:onClick="gotoDebugMenu"
-        android:text="Debug Menu"
-        android:textSize="24sp"
-        app:layout_constraintBottom_toTopOf="@+id/buttonConfigure"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
-        app:layout_constraintStart_toStartOf="parent" />
-
     <TextView
         android:id="@+id/textView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
-        android:layout_marginLeft="16dp"
         android:layout_marginTop="50dp"
         android:layout_marginEnd="16dp"
-        android:layout_marginRight="16dp"
-        android:text="PLUGS"
+        android:text="@string/app_name"
         android:textAllCaps="true"
         android:textColor="@color/colorPrimaryDark"
         android:textSize="36sp"
@@ -57,37 +38,47 @@
         app:layout_constraintTop_toTopOf="@+id/imageViewBG"
         tools:background="@color/colorPrimary" />
 
-    <Button
+    <ImageButton
+        android:id="@+id/buttonConfigure2"
+        android:layout_width="0dp"
+        android:layout_height="70dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="16dp"
+        android:background="@null"
+        android:onClick="gotoNetwork"
+        android:scaleType="fitCenter"
+        app:layout_constraintBottom_toTopOf="@+id/buttonConfigure"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.498"
+        app:layout_constraintStart_toStartOf="parent"
+        app:srcCompat="@drawable/network_button_selector" />
+
+    <ImageButton
         android:id="@+id/buttonConfigure"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginLeft="16dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginRight="16dp"
+        android:layout_height="70dp"
         android:layout_marginBottom="16dp"
+        android:background="@null"
         android:onClick="gotoConfigure"
-        android:text="Configure"
-        android:textSize="24sp"
+        android:scaleType="fitCenter"
         app:layout_constraintBottom_toTopOf="@+id/buttonDeploy"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.498"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:srcCompat="@drawable/settings_button_selector" />
 
-    <Button
+    <ImageButton
         android:id="@+id/buttonDeploy"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginLeft="16dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginRight="16dp"
-        android:layout_marginBottom="100dp"
+        android:layout_height="70dp"
+        android:layout_marginBottom="50dp"
+        android:background="@null"
         android:onClick="gotoDeploy"
-        android:text="Deploy"
-        android:textSize="24sp"
+        android:scaleType="fitCenter"
         app:layout_constraintBottom_toBottomOf="@+id/imageViewBG"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:srcCompat="@drawable/deploy_button_selector" />
 
 </android.support.constraint.ConstraintLayout>

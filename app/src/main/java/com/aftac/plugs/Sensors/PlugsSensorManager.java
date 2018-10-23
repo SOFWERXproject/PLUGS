@@ -95,6 +95,9 @@ public class PlugsSensorManager {
         sensor.removeEventListener(listener);
         if (sensor.listeners.size() <= 0) sensor.stop();
     }
+    public static void removeSensorEventListener(int type, PlugsSensorEventListener listener) {
+        removeSensorEventListener(type, getDefaultSensorIndex(type), listener);
+    }
 
 
     // Privates

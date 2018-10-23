@@ -64,8 +64,8 @@ public class BinaryFileOutputStream {
 	public void write(short[] shortArray, int offset, int length) throws IOException {
 		if (stream == null) throw new IOException();
 		int i = offset, stop = i + length;
-        if (bigEndian) { while (i < stop) stream.write(shortArray[i]); }
-        else { while (i < stop) stream.write(Short.reverseBytes(shortArray[i])); }
+        if (bigEndian) { while (length-- > 0) stream.writeShort(shortArray[i++]); }
+        else { while (length-- > 0) stream.writeShort(Short.reverseBytes(shortArray[i++])); }
 	}
     public void write(short[] shortArray) throws IOException {
         write(shortArray, 0, shortArray.length);
@@ -74,19 +74,19 @@ public class BinaryFileOutputStream {
     public void write(int[] intArray, int offset, int length) throws IOException {
 	    if (stream == null) throw new IOException();
 	    int i = offset, stop = i + length;
-	    if (bigEndian) { while (i < stop) stream.write(intArray[i]); }
-	    else { while (i < stop) stream.write(Integer.reverseBytes(intArray[i])); }
+	    if (bigEndian) { while (i < stop) stream.writeInt(intArray[i++]); }
+	    else { while (i < stop) stream.writeInt(Integer.reverseBytes(intArray[i++])); }
     }
     public void write(int[] intArray) throws IOException {
         write(intArray, 0, intArray.length);
     }
 
-    public void writeBytes(String str) throws IOException {
+    /*public void writeBytes(String str) throws IOException {
         if (stream == null) throw new IOException();
         byte[] arr = str.getBytes("UTF-8");
         int i = 0, len = arr.length;
-        if (bigEndian) { while (i < len) { stream.write((byte) arr[i]); } };
-    }
+        if (bigEndian) { while (i < len) { stream.write((byte) arr[i++]); } };
+    }*/
 
 	public void writeShort(int value) throws IOException {
 		if (stream == null) throw new IOException();
