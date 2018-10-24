@@ -103,8 +103,9 @@ public class AudioTrigger extends PlugsTrigger {
 
     private void processAudio() {
         long adjustment = Math.round(1000f / 11025f * audioStream.readAvailable());
-        long gpsTimestamp    = GpsService.getUtcTime()    - adjustment;
+        long gpsTimestamp    = GpsService.getUtcTime();
         long systemTimestamp = System.currentTimeMillis() - adjustment;
+        if (gpsTimestamp != 0) gpsTimestamp -= adjustment;
         boolean tripped = false;
         int tripPos = 0;
         float value, maxValue = Float.NEGATIVE_INFINITY;
@@ -134,7 +135,7 @@ public class AudioTrigger extends PlugsTrigger {
 
         if (tripped && settleCounter == 0) {// > sensitivity) {
             adjustment = Math.round(1000f / 11025f * tripPos);
-            gpsTimestamp    += adjustment;
+            if (gpsTimestamp != 0) gpsTimestamp += adjustment;
             systemTimestamp += adjustment;
             ByteBuffer data = ByteBuffer.wrap(new byte[Float.BYTES]);
             data.asFloatBuffer().put(volume);

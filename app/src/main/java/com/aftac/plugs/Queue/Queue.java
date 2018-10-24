@@ -422,10 +422,10 @@ public class Queue extends Service {
         }
 
         setAccelerometerTrigger(Float.parseFloat(
-                prefs.getString("pref_trigger_accelerometer", "50")));
+                prefs.getString("pref_trigger_accelerometer", "0")));
 
         setAudioTrigger(Float.parseFloat(
-                prefs.getString("pref_trigger_microphone", "50")));
+                prefs.getString("pref_trigger_microphone", "0")));
     }
 
     private static SharedPreferences.OnSharedPreferenceChangeListener prefsListener =
@@ -440,11 +440,11 @@ public class Queue extends Service {
                 case "pref_trigger_accelerometer":
                     //String[] strValues = me.getResources().getStringArray(R.array.pref_trigger_accelerometer_values);
                     setAccelerometerTrigger(Float.parseFloat(
-                            prefs.getString("pref_trigger_accelerometer", "50")));
+                            prefs.getString("pref_trigger_accelerometer", "0")));
                 break;
                 case "pref_trigger_microphone":
                     setAudioTrigger(Float.parseFloat(
-                            prefs.getString("pref_trigger_microphone", "50")));
+                            prefs.getString("pref_trigger_microphone", "0")));
                 break;
             }
         }

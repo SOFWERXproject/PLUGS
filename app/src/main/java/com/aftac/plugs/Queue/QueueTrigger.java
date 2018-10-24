@@ -29,6 +29,7 @@ public class QueueTrigger extends Queue.QueueItem {
         super();
         byte chr;
         this.source = ""; while ((chr = buffer.get()) != 0) { this.source += (char)chr; }
+        if (source.equals(Queue.getName())) source = Queue.COMMAND_TARGET_NONE;
         this.timestampUtc    = buffer.getLong();
         this.timestampSystem = buffer.getLong();
         this.sensorType  = buffer.getInt();

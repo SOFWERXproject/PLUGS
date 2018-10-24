@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.IntentFilter;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.util.Log;
 
 import com.aftac.plugs.Queue.Queue;
@@ -57,6 +58,8 @@ public class MeshManager {
     public static final String DEVICE_SELF = Queue.COMMAND_TARGET_SELF;//"%SELF%";
     public static final String DEVICE_ALL  = Queue.COMMAND_TARGET_ALL;//"%ALL%";
 
+    private static final int PING_INTERVAL = 5000;
+
     public static final int STATE_ENABLED_FLAG    = 0x0001;
     public static final int STATE_LISTENING_FLAG  = 0x0002;
     public static final int STATE_CONNECTING_FLAG = 0x0004;
@@ -74,7 +77,8 @@ public class MeshManager {
     public static final int ERROR_LISTEN = 3;
 
     private static MeshManager me;
-    private static ConnectionsClient connectionsClient;
+    static ConnectionsClient connectionsClient;
+    private static Handler handler;
 
     private static final IntentFilter intentFilter = new IntentFilter();
 
@@ -89,6 +93,7 @@ public class MeshManager {
     private static boolean hasError = false;
     private static int lastError = ERROR_NONE;
     private static int lastErrorCode = 0;
+    private static long myLastPing;
 
     private static boolean isListening = false;
     private static boolean isEnabled = false;
@@ -115,12 +120,15 @@ public class MeshManager {
             return;
         }
         isEnabled = true;
+        handler = new Handler(Looper.myLooper());
 
         // Instance for non-static methods (all of which should be private)
         me = new MeshManager();
 
         // Nearby Connections API client
         connectionsClient = Nearby.getConnectionsClient(context);
+
+        alivePing();
     }
 
     // Getters
@@ -189,6 +197,7 @@ public class MeshManager {
         // Add device to mesh group and connect
         if (device != null) {
             if (!inMeshGroup(name)) {
+                device.isInMesh = true;
                 myMeshGroup.add(device);
                 if (device.isConnected) {
                     // Send current mesh group members to new member
@@ -198,6 +207,7 @@ public class MeshManager {
                     connectTo(name);
                     device.newInGroup = true;
                 }
+                onDevicesChanged();
             } else {
                 if (!device.isConnected() && !device.isConnecting())
                     connectTo(name);
@@ -207,7 +217,9 @@ public class MeshManager {
         } else {
             device = new MeshDevice(name, "");
             device.newInGroup = true;
+            device.isInMesh = true;
             myMeshGroup.add(device);
+            onDevicesChanged();
         }
 
         //if (commandSource == DEVICE_SELF) {
@@ -342,9 +354,12 @@ public class MeshManager {
             // TODO: This is where an "Are you sure you want to connect" dialog would be shown
 
             connectionsClient.acceptConnection(deviceId, payloadCallback);
-            // This device isn't in the available list, add it.
-            if (getDevice(name) == null)
+
+            MeshDevice device = getDevice(name);
+            if (device == null)
                 deviceAddAvailable(name, deviceId);
+            else
+                device.id = deviceId;
 
             // Set this deviceId's status to connecting
             deviceConnecting(name);
@@ -420,10 +435,39 @@ public class MeshManager {
         }
 
         private void processPayload(String deviceId, Payload payload) {
-            MeshDevice device = getDeviceById(deviceId);
+            ByteBuffer buf = ByteBuffer.wrap(payload.asBytes());
+            MeshPacket packet = new MeshPacket(deviceId, buf);
+            MeshDevice device = getDevice(packet.source);
+            //Log.d(LOG_TAG, "Payload received: " + device.name);
+
+            // Get the source device, and ignore packets already marked as received from them
+            device = getDevice(packet.source);
+            if (device == null) {
+                device = getDeviceById(packet.sourceId);
+                if (device != null && packet.sourceId.equals(deviceId)) device.name = packet.source;
+            }
+            if (device == null) {
+                device = new MeshDevice(packet.source, "");
+            } else if (device.hasPacketBeenReceived(packet.index))
+                return;
+
+            if (!myMeshGroup.contains(device)) {
+                device.isInMesh = true;
+                myMeshGroup.add(device);
+                onDevicesChanged();
+            }
             Log.d(LOG_TAG, "Payload received: " + device.name);
 
-            ByteBuffer buf = ByteBuffer.wrap(payload.asBytes());
+            // Mark the packet as received from the source device
+            device.receivedPacket(packet.index);
+
+            // Pass along the packet wherever else it needs to go
+            if (!packet.destination.equals(Queue.getName())) {
+                if (packet.destination.equals(DEVICE_ALL))
+                    packet.sendTo(connectedDevices);
+                else
+                    packet.sendTo(getDevice(packet.destination), connectedDevices);
+            }
 
             /*
                 Header
@@ -433,7 +477,7 @@ public class MeshManager {
                     String  sourceDeviceId
                     String  destinationDeviceId
              */
-            int headerLength = buf.getInt();
+            /*int headerLength = buf.getInt();
             int serial       = buf.getInt();
             int contentType  = buf.getInt();
             byte chr;
@@ -460,14 +504,17 @@ public class MeshManager {
                 }
                 device.name = src;
                 device.isConnected = true;
-            }
+            }*/
 
-            switch (contentType) {
+            switch (packet.contentType) {
                 case CONTENT_HELLO:
-                    if (!dst.equals(Queue.getName())) {
-                        Log.v(LOG_TAG, "WARNING Destination device name mismatch (" + dst
-                                + ", " + Queue.getName() + ")");
-                    }
+                    /*if (!packet.destination.equals(Queue.getName())) {
+                        if (inMeshGroup(packet.destination)) {
+
+                        }
+                        Log.v(LOG_TAG, "WARNING Destination device name mismatch ("
+                                + packet.destination + ", " + Queue.getName() + ")");
+                    }*/
 
                     if (device.newInGroup) {
                         device.newInGroup = false;
@@ -512,49 +559,38 @@ public class MeshManager {
     };
 
     public static void send(String destination, int contentType, byte[] data) {
+        if (myMeshGroup == null) return;
+        ByteBuffer buffer = null;
+        if (data != null)
+            buffer = ByteBuffer.wrap(data);
+        MeshPacket packet = new MeshPacket(destination, contentType, buffer);
+
         if (destination.equals(DEVICE_ALL)) {
-            // TODO: Send payload to all in mesh group
-
-            for (MeshDevice device : myMeshGroup) {
-                if (device == null || device.id.equals("")) continue;
-
-                int headerLength = 12 + destination.length() + Queue.getName().length() + 2;
-                int length = headerLength;
-                if (data != null)
-                    length += data.length;
-                ByteBuffer buf = ByteBuffer.wrap(new byte[length]);
-                buf.putInt(headerLength);
-                buf.putInt(device.serialTx++);
-                buf.putInt(contentType);
-                buf.put(Queue.getName().getBytes()); buf.put((byte)0);
-                buf.put(destination.getBytes()); buf.put((byte)0);
-                if (data != null)
-                    buf.put(data);
-
-                connectionsClient.sendPayload(device.id, Payload.fromBytes(buf.array()));
-            }
+            myLastPing = SystemClock.elapsedRealtime();
+            packet.sendTo(myMeshGroup);
         } else {
-            Log.v(LOG_TAG, "Sending: " + destination + ", " + contentType);
-            MeshDevice device = getDevice(destination);
-            if (device == null || device.id.equals("")) {
-                Log.v(LOG_TAG, "Error: Trying to send to non-existant endpoint \""
-                            + destination + "\"");
-            }
-            int headerLength = 12 + destination.length() + Queue.getName().length() + 2;
-            int length = headerLength;
-            if (data != null)
-                length += data.length;
-            ByteBuffer buf = ByteBuffer.wrap(new byte[length]);
-            buf.putInt(headerLength);
-            buf.putInt(device.serialTx++);
-            buf.putInt(contentType);
-            buf.put(Queue.getName().getBytes()); buf.put((byte)0);
-            buf.put(destination.getBytes()); buf.put((byte)0);
-            if (data != null)
-                buf.put(data);
-
-            connectionsClient.sendPayload(device.id, Payload.fromBytes(buf.array()));
+            packet.sendTo(getDevice(destination), myMeshGroup);
         }
+    }
+
+    private static void alivePing(boolean force) {
+        long timeSinceLastPing = SystemClock.elapsedRealtime() - myLastPing;
+        if (force || timeSinceLastPing >= PING_INTERVAL) {
+
+            if (myMeshGroup != null) {
+                MeshPacket packet = new MeshPacket(DEVICE_ALL, CONTENT_HELLO, null);
+                packet.sendTo(myMeshGroup);
+                myLastPing = SystemClock.elapsedRealtime();
+            }
+            handler.postDelayed(MeshManager::alivePing, 5000);
+        } else {
+            long time = PING_INTERVAL - timeSinceLastPing;
+            if (time < 100) time = 100;
+            handler.postDelayed(MeshManager::alivePing, time);
+        }
+    }
+    private static void alivePing() {
+        alivePing(false);
     }
 
     private static boolean inMeshGroup(String name) {
@@ -763,13 +799,14 @@ public class MeshManager {
     // Fires off the peer/device changed callbacks
     private static void onDevicesChanged(ListenerCallback listener) {
         // Create a duplicate list of the available devices
-        List<MeshDevice> list = new ArrayList<>(availableDevices);
+        List<MeshDevice> list = new ArrayList<>(connectedDevices);
         boolean exists;
 
-        // Merge in the connected device list skipping any that are also in the available list
-        for (MeshDevice device : connectedDevices) {
+        // Merge in mesh devices
+        for (MeshDevice device : myMeshGroup) {
+            if (device.timeSinceLastPing() > 30000) continue;
             exists = false;
-            for (MeshDevice checkDevice : availableDevices) {
+            for (MeshDevice checkDevice : list) {
                 if (device.name.equals(checkDevice.name)) {
                     exists = true;
                     break;
@@ -777,6 +814,19 @@ public class MeshManager {
             }
             if (!exists) list.add(device);
         }
+
+        // Merge in the connected device list skipping any that are also in the available list
+        for (MeshDevice device : availableDevices) {
+            exists = false;
+            for (MeshDevice checkDevice : list) {
+                if (device.name.equals(checkDevice.name)) {
+                    exists = true;
+                    break;
+                }
+            }
+            if (!exists) list.add(device);
+        }
+
 
         // Send the list out to the listener(s)
         if (listener != null) {

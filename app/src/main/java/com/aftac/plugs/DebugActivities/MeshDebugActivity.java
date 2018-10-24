@@ -149,9 +149,17 @@ public class MeshDebugActivity extends AppCompatActivity
                 this.deviceName = device.getName();
                 ((TextView)myView.findViewById(R.id.device_name))
                             .setText(deviceName);
-                ((TextView)myView.findViewById(R.id.device_details)).setText(
+                if (device.timeSinceLastPing() <= 10000) {
+                    ((TextView) myView.findViewById(R.id.device_details)).setText(
                             (device.isConnected() ? "Connected" :
-                            (device.isConnecting() ? "Connecting" : "Available")));
+                            (device.isConnecting() ? "Connecting" :
+                            (device.isInMesh()) ? "Connected through mesh" : "Available")));
+                } else {
+                    ((TextView) myView.findViewById(R.id.device_details)).setText(
+                            (device.isConnected() ?  "Connected (Latent)" :
+                            (device.isConnecting() ? "Connecting" :
+                            (device.isInMesh()) ? "Connected through mesh (Latent)" : "Available")));
+                }
             }
         }
     };

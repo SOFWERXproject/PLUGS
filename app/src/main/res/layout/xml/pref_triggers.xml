@@ -10,7 +10,7 @@
     -->
 
     <ListPreference
-        android:defaultValue="50"
+        android:defaultValue="0"
         android:entries="@array/pref_trigger_accelerometer_titles"
         android:entryValues="@array/pref_trigger_accelerometer_values"
         android:key="pref_trigger_accelerometer"
@@ -19,7 +19,7 @@
         android:title="@string/pref_sensor_accelerometer" />
 
     <ListPreference
-        android:defaultValue="50"
+        android:defaultValue="0"
         android:entries="@array/pref_trigger_microphone_titles"
         android:entryValues="@array/pref_trigger_microphone_values"
         android:key="pref_trigger_microphone"
